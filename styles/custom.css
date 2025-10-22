@@ -1,0 +1,6 @@
+/* Background color matching landing page */
+body,
+html,
+[data-theme="light"] {
+  background-color: #f6f6f4 !important;
+}

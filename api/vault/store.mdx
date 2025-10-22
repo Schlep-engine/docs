@@ -1,0 +1,236 @@
+---
+title: "Store API Key"
+description: "Store an encrypted provider API key for a tenant"
+api: "POST /v1/vault/keys"
+---
+
+# Store API Key
+
+Store a provider API key in the encrypted BYOK (Bring Your Own Key) vault.
+
+## Endpoint
+
+```
+POST /v1/vault/keys
+```
+
+<Note>
+  Requires tenant authentication via JWT token.
+</Note>
+
+## Request
+
+```json
+{
+  "provider": "openai",
+  "key_name": "production",
+  "api_key": "sk-proj-abc123..."
+}
+```
+
+## Request Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `provider` | string | Yes | Provider name (`openai`, `anthropic`) |
+| `key_name` | string | Yes | Unique name for this key |
+| `api_key` | string | Yes | The provider API key to encrypt and store |
+
+## Response
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "tenant_id": "acme-corp",
+  "provider": "openai",
+  "key_name": "production",
+  "is_active": true,
+  "is_valid": null,
+  "key_version": 1,
+  "created_at": "2025-10-21T12:00:00Z"
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique key identifier (UUID) |
+| `tenant_id` | string | Tenant that owns this key |
+| `provider` | string | Provider name |
+| `key_name` | string | Key name |
+| `is_active` | boolean | Whether this key is active |
+| `is_valid` | boolean | Whether key has been validated (null = not yet validated) |
+| `key_version` | integer | Version number (for key rotation) |
+| `created_at` | string | When the key was stored |
+
+<Warning>
+  The plaintext API key is never stored. It's immediately encrypted using AES-256-GCM and only decrypted when needed for API calls.
+</Warning>
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| `201` | Key stored successfully |
+| `400` | Invalid request (missing fields, invalid provider) |
+| `401` | Unauthorized (missing or invalid JWT token) |
+| `409` | Conflict (key already exists for this provider) |
+| `500` | Internal server error |
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST http://localhost:8080/v1/vault/keys \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "provider": "openai",
+    "key_name": "production",
+    "api_key": "sk-proj-abc123..."
+  }'
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    "http://localhost:8080/v1/vault/keys",
+    headers={
+        "Content-Type": "application/json",
+        "Authorization": "Bearer YOUR_JWT_TOKEN"
+    },
+    json={
+        "provider": "openai",
+        "key_name": "production",
+        "api_key": "sk-proj-abc123..."
+    }
+)
+
+key_info = response.json()
+print(f"Key stored with ID: {key_info['id']}")
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:8080/v1/vault/keys', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  },
+  body: JSON.stringify({
+    provider: 'openai',
+    key_name: 'production',
+    api_key: 'sk-proj-abc123...'
+  })
+});
+
+const keyInfo = await response.json();
+console.log(`Key stored with ID: ${keyInfo.id}`);
+```
+
+</CodeGroup>
+
+## Encryption Details
+
+### AES-256-GCM Encryption
+
+All API keys are encrypted using AES-256-GCM:
+
+- **Algorithm**: AES-256-GCM (Galois/Counter Mode)
+- **Key Size**: 256 bits (32 bytes)
+- **IV Size**: 96 bits (12 bytes), randomly generated per operation
+- **Authentication**: GCM provides authenticated encryption
+
+### What's Stored
+
+In the database:
+
+```sql
+{
+  "encrypted_key": "base64-encoded-ciphertext",
+  "encryption_iv": "base64-encoded-initialization-vector",
+  "encryption_tag": "base64-encoded-authentication-tag"
+}
+```
+
+The plaintext key is:
+- ✅ Encrypted immediately upon receipt
+- ✅ Only decrypted when needed for provider API calls
+- ✅ Never logged or persisted in plaintext
+- ✅ Protected with authenticated encryption (GCM tag)
+
+## Key Rotation
+
+To rotate a key (replace with new one):
+
+1. Store new key with same `provider` and `key_name`
+2. Old key is automatically deactivated
+3. New key becomes active (`key_version` increments)
+
+```bash
+# Rotate OpenAI key
+curl -X POST http://localhost:8080/v1/vault/keys \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "provider": "openai",
+    "key_name": "production",
+    "api_key": "sk-proj-NEW-KEY..."
+  }'
+```
+
+Or use the dedicated rotation endpoint:
+
+```bash
+POST /v1/vault/keys/openai/rotate
+```
+
+## Validate Key
+
+After storing, validate that the key works:
+
+```bash
+POST /v1/vault/keys/openai/validate
+```
+
+This makes a test API call to the provider and updates `is_valid` field.
+
+## Security Best Practices
+
+1. **Use Environment-Specific Keys**
+   ```
+   key_name: "production"  # For production use
+   key_name: "staging"     # For staging use
+   key_name: "development" # For development use
+   ```
+
+2. **Rotate Keys Regularly**
+   ```
+   # Every 90 days
+   POST /v1/vault/keys/openai/rotate
+   ```
+
+3. **Validate After Storing**
+   ```bash
+   # Store key
+   POST /v1/vault/keys
+
+   # Immediately validate
+   POST /v1/vault/keys/openai/validate
+   ```
+
+4. **Monitor Key Usage**
+   ```bash
+   # Check last used time
+   GET /v1/vault/keys/openai
+   ```
+
+## Related Endpoints
+
+- [List Keys](/api/vault/list) - List all stored keys
+- [Get Key Info](/api/vault/get) - Get key metadata (not plaintext)
+- [Rotate Key](/api/vault/rotate) - Rotate to new key
+- [Validate Key](/api/vault/validate) - Test key with provider
+- [Delete Key](/api/vault/delete) - Remove key

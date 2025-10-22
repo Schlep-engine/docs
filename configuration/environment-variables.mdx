@@ -1,0 +1,452 @@
+---
+title: "Environment Variables"
+description: "Complete reference for Schlep-engine configuration"
+---
+
+# Environment Variables
+
+Configure Schlep-engine using environment variables.
+
+## Server Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `8080` | HTTP server port |
+| `HOST` | `0.0.0.0` | Server bind address |
+| `ENV` | `development` | Environment (`development`, `staging`, `production`) |
+| `DEBUG` | `false` | Enable debug logging |
+
+### Example
+
+```bash
+export PORT=8081
+export ENV=production
+export DEBUG=false
+```
+
+## Provider Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PROVIDER_MODE` | `mock` | Provider mode (`mock`, `benchmark`, `real`, `hybrid`) |
+| `OPENAI_API_KEY` | - | OpenAI API key (required for `real` mode) |
+| `ANTHROPIC_API_KEY` | - | Anthropic API key (required for `real` mode) |
+
+### Provider Modes
+
+**mock**
+- Simple mock responses
+- No external API calls
+- Best for: Unit testing
+
+**benchmark**
+- Realistic simulation with accurate pricing
+- No API keys required
+- Best for: Load testing, development
+
+**real**
+- Actual provider API calls
+- Requires valid API keys
+- Best for: Production
+
+**hybrid**
+- Mix of benchmark and real providers
+- Best for: Gradual migration
+
+### Example
+
+```bash
+# Development with benchmark providers
+export PROVIDER_MODE=benchmark
+
+# Production with real providers
+export PROVIDER_MODE=real
+export OPENAI_API_KEY=sk-proj-...
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+## Optimizer Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `OPTIMIZER_MODE` | `shadow` | Optimizer mode (`go`, `shadow`, `rust`) |
+| `OPTIMIZER_SAMPLE_RATE` | `0.0` | Rust optimizer sample rate (0.0-1.0) |
+
+### Optimizer Modes
+
+**go**
+- Use Go router only
+- Weighted provider selection
+- No Rust dependency
+
+**shadow**
+- Go router (primary)
+- Rust optimizer runs in parallel (logged, not used)
+- Best for: Validating Rust optimizer
+
+**rust**
+- Use Rust Thompson Sampling optimizer
+- Go fallback on error
+- Sample rate controls percentage of requests
+- Best for: Production (gradual rollout)
+
+### Example
+
+```bash
+# Start with Go router
+export OPTIMIZER_MODE=go
+
+# Test Rust in shadow mode
+export OPTIMIZER_MODE=shadow
+
+# Enable Rust for 10% of traffic
+export OPTIMIZER_MODE=rust
+export OPTIMIZER_SAMPLE_RATE=0.1
+
+# Full Rust optimization
+export OPTIMIZER_MODE=rust
+export OPTIMIZER_SAMPLE_RATE=1.0
+```
+
+## Multi-Tenancy Configuration (Phase 14)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ENABLE_MULTI_TENANCY` | `false` | Enable multi-tenant features |
+| `ENABLE_PERSISTENCE` | `false` | Enable database persistence |
+| `ENABLE_BYOK_VAULT` | `false` | Enable Bring-Your-Own-Key vault |
+| `DATABASE_URL` | - | PostgreSQL connection string |
+| `JWT_SECRET` | - | JWT signing secret (64-char hex) |
+| `VAULT_MASTER_KEY` | - | AES-256 master key for BYOK vault (64-char hex) |
+| `TOKEN_TTL_HOURS` | `24` | JWT token time-to-live in hours |
+| `TRACK_JWT_SESSIONS` | `true` | Track JWT sessions in database |
+| `ADMIN_TOKEN` | - | Admin API authentication token |
+
+### Generating Secrets
+
+```bash
+# Generate JWT secret (64-char hex)
+export JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_hex(32))")
+
+# Generate vault master key (64-char hex)
+export VAULT_MASTER_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
+
+# Generate admin token
+export ADMIN_TOKEN=$(python3 -c "import secrets; print(secrets.token_hex(32))")
+```
+
+### Multi-Tenancy Features
+
+**ENABLE_MULTI_TENANCY**: Master switch for all multi-tenant features
+**ENABLE_PERSISTENCE**: Required for budget tracking and audit logs
+**ENABLE_BYOK_VAULT**: Enables encrypted API key storage per tenant
+**TRACK_JWT_SESSIONS**: Stores JWT sessions for revocation support
+
+### Example
+
+```bash
+# Full multi-tenancy setup
+export ENABLE_MULTI_TENANCY=true
+export ENABLE_PERSISTENCE=true
+export ENABLE_BYOK_VAULT=true
+export DATABASE_URL="postgresql://user:pass@localhost:5432/schlep?sslmode=require"
+export JWT_SECRET="your-64-char-hex-secret"
+export VAULT_MASTER_KEY="your-64-char-hex-master-key"
+export TOKEN_TTL_HOURS=24
+export TRACK_JWT_SESSIONS=true
+export ADMIN_TOKEN="your-admin-token"
+```
+
+## Database Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | - | PostgreSQL connection string |
+| `DATABASE_MAX_CONNECTIONS` | `25` | Maximum database connections |
+| `DATABASE_IDLE_CONNECTIONS` | `5` | Idle database connections |
+
+### Example
+
+```bash
+export DATABASE_URL="postgresql://user:pass@localhost:5432/schlep?sslmode=require"
+export DATABASE_MAX_CONNECTIONS=50
+export DATABASE_IDLE_CONNECTIONS=10
+```
+
+## Advanced Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `REQUEST_TIMEOUT` | `60` | HTTP request timeout in seconds |
+| `PROVIDER_TIMEOUT` | `30` | Provider API timeout in seconds |
+| `MAX_RETRIES` | `3` | Maximum retry attempts for failed requests |
+| `RETRY_DELAY_MS` | `500` | Delay between retries in milliseconds |
+| `VERBOSE_LOGGING` | `false` | Enable verbose debug logging |
+| `SHADOW_LOG_DIR` | `./logs/optimizer` | Directory for shadow mode comparison logs |
+| `TRACE_SAMPLING_RATE` | `1.0` | Distributed tracing sampling rate (0.0-1.0) |
+
+### Example
+
+```bash
+# Production timeouts
+export REQUEST_TIMEOUT=120
+export PROVIDER_TIMEOUT=60
+export MAX_RETRIES=3
+export RETRY_DELAY_MS=1000
+
+# Development debugging
+export VERBOSE_LOGGING=true
+export SHADOW_LOG_DIR=./logs/optimizer
+export TRACE_SAMPLING_RATE=0.1  # Sample 10% of requests
+```
+
+## Cache Configuration (Future)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `REDIS_URL` | `localhost:6379` | Redis connection URL |
+| `REDIS_PASSWORD` | - | Redis password (if required) |
+| `CACHE_ENABLED` | `false` | Enable response caching |
+
+### Example
+
+```bash
+export REDIS_URL="redis://localhost:6379"
+export REDIS_PASSWORD="your-redis-password"
+export CACHE_ENABLED=true
+```
+
+## Observability Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `METRICS_ENABLED` | `true` | Enable Prometheus metrics |
+| `METRICS_PORT` | `9090` | Metrics server port |
+| `TRACING_ENABLED` | `false` | Enable OpenTelemetry tracing |
+| `TRACING_ENDPOINT` | - | Jaeger/OTEL collector endpoint |
+| `LOG_LEVEL` | `info` | Logging level (`debug`, `info`, `warn`, `error`) |
+| `LOG_FORMAT` | `json` | Log format (`json`, `text`) |
+
+### Example
+
+```bash
+# Enable metrics on custom port
+export METRICS_ENABLED=true
+export METRICS_PORT=9091
+
+# Enable distributed tracing
+export TRACING_ENABLED=true
+export TRACING_ENDPOINT="http://jaeger:14268/api/traces"
+
+# Debug logging
+export LOG_LEVEL=debug
+export LOG_FORMAT=text
+```
+
+## Safety Controls Configuration (Phase 12)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PROVIDER_TEST_MODE` | `false` | Enable test mode with enhanced safety controls |
+| `MAX_MONTHLY_COST_USD` | `5.0` | Maximum monthly spending cap in USD |
+| `ENABLE_BUDGET_LIMIT` | `true` | Enable budget enforcement |
+| `FALLBACK_ON_BUDGET_BREACH` | `true` | Auto-fallback to benchmark on budget exceeded |
+| `MAX_TOKENS_PER_REQUEST` | `1024` | Maximum tokens per single request |
+| `ENABLE_TOKEN_LIMIT` | `true` | Enable token limit enforcement |
+| `ENABLE_BENCHMARK_FALLBACK` | `true` | Enable automatic fallback to benchmark providers |
+| `VALIDATE_KEYS_ON_STARTUP` | `true` | Validate API keys at startup |
+| `FAIL_FAST_ON_INVALID_KEY` | `true` | Abort startup if API key validation fails |
+
+### Safety Features
+
+**Test Mode**:
+When enabled, applies enhanced safety controls:
+- Truncates excessive token requests instead of rejecting
+- Limits temperature and top_p to safe ranges
+- Automatically falls back to benchmark on errors
+
+**Budget Controls**:
+Tracks cumulative monthly spend and enforces limits. When budget is exceeded, can automatically fallback to free benchmark mode to prevent overages.
+
+**Token Limits**:
+Maximum tokens per request (prompt + completion). Prevents accidentally large requests that could drain budgets.
+
+### Example
+
+```bash
+# Enable all safety features
+export PROVIDER_TEST_MODE=false
+export MAX_MONTHLY_COST_USD=100.0
+export ENABLE_BUDGET_LIMIT=true
+export FALLBACK_ON_BUDGET_BREACH=true
+export MAX_TOKENS_PER_REQUEST=2048
+export ENABLE_TOKEN_LIMIT=true
+export ENABLE_BENCHMARK_FALLBACK=true
+export VALIDATE_KEYS_ON_STARTUP=true
+export FAIL_FAST_ON_INVALID_KEY=true
+```
+
+## Rate Limiting Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RATE_LIMIT_ENABLED` | `true` | Enable global rate limiting |
+| `RATE_LIMIT_REQUESTS_PER_SECOND` | `100` | Global rate limit (requests/second) |
+
+### Example
+
+```bash
+export RATE_LIMIT_ENABLED=true
+export RATE_LIMIT_REQUESTS_PER_SECOND=1000
+```
+
+## Complete Production Example
+
+```bash
+# Server
+export PORT=8080
+export ENV=production
+export DEBUG=false
+
+# Providers
+export PROVIDER_MODE=real
+export OPENAI_API_KEY=sk-proj-...
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# Optimizer
+export OPTIMIZER_MODE=rust
+export OPTIMIZER_SAMPLE_RATE=0.5  # 50% traffic
+
+# Safety Controls (Phase 12)
+export PROVIDER_TEST_MODE=false
+export MAX_MONTHLY_COST_USD=1000.0
+export ENABLE_BUDGET_LIMIT=true
+export FALLBACK_ON_BUDGET_BREACH=true
+export MAX_TOKENS_PER_REQUEST=4096
+export ENABLE_TOKEN_LIMIT=true
+export ENABLE_BENCHMARK_FALLBACK=true
+export VALIDATE_KEYS_ON_STARTUP=true
+export FAIL_FAST_ON_INVALID_KEY=true
+
+# Multi-Tenancy (Phase 14)
+export ENABLE_MULTI_TENANCY=true
+export ENABLE_PERSISTENCE=true
+export ENABLE_BYOK_VAULT=true
+export DATABASE_URL="postgresql://user:pass@db.example.com:5432/schlep?sslmode=require"
+export JWT_SECRET="$(python3 -c "import secrets; print(secrets.token_hex(32))")"
+export VAULT_MASTER_KEY="$(python3 -c "import secrets; print(secrets.token_hex(32))")"
+export TOKEN_TTL_HOURS=24
+export TRACK_JWT_SESSIONS=true
+export ADMIN_TOKEN="$(python3 -c "import secrets; print(secrets.token_hex(32))")"
+
+# Advanced Configuration
+export REQUEST_TIMEOUT=120
+export PROVIDER_TIMEOUT=60
+export MAX_RETRIES=3
+export RETRY_DELAY_MS=1000
+export VERBOSE_LOGGING=false
+export TRACE_SAMPLING_RATE=0.1
+
+# Observability
+export METRICS_ENABLED=true
+export METRICS_PORT=9090
+export TRACING_ENABLED=true
+export TRACING_ENDPOINT="http://jaeger:14268/api/traces"
+export LOG_LEVEL=info
+export LOG_FORMAT=json
+
+# Rate Limiting
+export RATE_LIMIT_ENABLED=true
+export RATE_LIMIT_REQUESTS_PER_SECOND=1000
+```
+
+## Environment Files
+
+### Using .env file
+
+Create a `.env` file in the project root:
+
+```bash
+# .env
+PORT=8080
+PROVIDER_MODE=benchmark
+OPTIMIZER_MODE=go
+DEBUG=true
+```
+
+Load with:
+
+```bash
+# Using direnv
+direnv allow
+
+# Using dotenv
+export $(cat .env | xargs)
+
+# Using Docker Compose
+docker-compose --env-file .env up
+```
+
+### Docker Compose
+
+```yaml
+version: '3.8'
+
+services:
+  schlep-engine:
+    image: schlep-engine:latest
+    environment:
+      - PORT=8080
+      - PROVIDER_MODE=real
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPTIMIZER_MODE=rust
+      - OPTIMIZER_SAMPLE_RATE=1.0
+      - ENABLE_MULTI_TENANCY=true
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/schlep
+    ports:
+      - "8080:8080"
+```
+
+## Security Best Practices
+
+<Warning>
+  Never commit secrets to version control. Use environment variables or secret management systems.
+</Warning>
+
+### Recommended Practices
+
+1. **Use Secret Management**
+   - AWS Secrets Manager
+   - HashiCorp Vault
+   - Kubernetes Secrets
+
+2. **Rotate Secrets Regularly**
+   ```bash
+   # Rotate JWT secret every 90 days
+   # Rotate vault master key every 180 days
+   # Rotate provider API keys as needed
+   ```
+
+3. **Use Strong Secrets**
+   ```bash
+   # Always use 64-character hex strings for JWT and vault keys
+   python3 -c "import secrets; print(secrets.token_hex(32))"
+   ```
+
+4. **Secure Database Connections**
+   ```bash
+   # Always use SSL/TLS for database connections
+   export DATABASE_URL="postgresql://user:pass@host:5432/db?sslmode=require"
+   ```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Optimizer Modes" icon="brain" href="/configuration/optimizer-modes">
+    Learn about optimizer configuration
+  </Card>
+
+  <Card title="Multi-Tenancy Setup" icon="users" href="/multi-tenancy/overview">
+    Configure multi-tenant features
+  </Card>
+</CardGroup>

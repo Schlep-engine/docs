@@ -1,0 +1,107 @@
+---
+title: "Introduction"
+description: "Schlep-engine is a production-ready ML inference routing platform with intelligent provider selection and multi-tenancy support"
+mode: "wide"
+---
+
+# Welcome to Schlep-engine
+
+Schlep-engine is a sophisticated ML inference routing platform that intelligently routes LLM requests across multiple AI providers using Thompson Sampling optimization.
+
+## What is Schlep-engine?
+
+Schlep-engine acts as an intelligent gateway between your applications and multiple LLM providers (OpenAI, Anthropic, and more). It automatically selects the best provider for each request based on:
+
+- **Latency** - Response time performance
+- **Cost** - Provider pricing and your budget
+- **Quality** - Success rates and error handling
+- **Availability** - Provider health and capacity
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Thompson Sampling Optimization" icon="chart-line">
+    Multi-armed bandit algorithm that learns which providers perform best for your workload (Phase 10)
+  </Card>
+
+  <Card title="Multi-Tenancy with BYOK" icon="key">
+    Complete tenant isolation with AES-256-GCM encrypted API keys and per-tenant policies (Phase 14)
+  </Card>
+
+  <Card title="Budget & Safety Controls" icon="shield-check">
+    Automatic budget enforcement, token limits, and benchmark fallback to prevent cost overruns (Phase 12)
+  </Card>
+
+  <Card title="Developer Console" icon="desktop">
+    Full-featured web console for tenant management, usage analytics, and policy configuration (Phase 15)
+  </Card>
+
+  <Card title="Real-time Cost Tracking" icon="dollar-sign">
+    Per-request cost calculation with detailed breakdowns by provider and model
+  </Card>
+
+  <Card title="Comprehensive Observability" icon="chart-mixed">
+    Prometheus metrics, distributed tracing, and detailed audit logs for compliance
+  </Card>
+</CardGroup>
+
+## Architecture Overview
+
+```
+Client → Schlep-engine API → Thompson Sampling Router → Provider Selection → OpenAI/Anthropic
+                           ↓
+                    Safety Controls (Budget, Tokens, Rate Limits)
+                           ↓
+                    Metrics & Audit Logs
+```
+
+## Use Cases
+
+### 1. Cost Optimization
+Automatically route to the most cost-effective provider while maintaining quality thresholds.
+
+### 2. Latency Optimization
+Minimize response times by selecting the fastest provider for your geographic region.
+
+### 3. Multi-Tenant SaaS
+Build a multi-tenant AI application with secure key management and per-tenant budgets.
+
+### 4. Fallback & Resilience
+Automatic failover to alternative providers when primary providers experience issues.
+
+### 5. Enterprise Multi-Tenancy
+Build SaaS applications with complete tenant isolation, encrypted key storage (BYOK), per-tenant budgets, and comprehensive audit logging.
+
+### 6. Budget Protection
+Prevent cost overruns with automatic budget enforcement, token limits, and configurable fallback to free benchmark providers.
+
+## Current Status
+
+**Version**: v0.1.0-alpha
+**Latest Phase**: 15 (Developer Console)
+**Production Status**:
+- Core Inference: ✅ Production Ready
+- Multi-Tenancy & BYOK: ✅ Production Ready (Phase 14)
+- Safety Controls: ✅ Production Ready (Phase 12)
+- Developer Console: ✅ Ready (Phase 15)
+- Thompson Sampling: ✅ Stable (Phase 10)
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart Guide" icon="rocket" href="/quickstart">
+    Get up and running in 5 minutes
+  </Card>
+
+  <Card title="Architecture Deep Dive" icon="diagram-project" href="/core-concepts/architecture">
+    Understand how Schlep-engine works
+  </Card>
+
+  <Card title="API Reference" icon="code" href="/api-reference/inference">
+    Explore the API endpoints
+  </Card>
+
+  <Card title="Multi-Tenancy Setup" icon="users" href="/multi-tenancy/overview">
+    Enable multi-tenant features
+  </Card>
+</CardGroup>

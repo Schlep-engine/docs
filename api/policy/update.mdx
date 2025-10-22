@@ -1,0 +1,291 @@
+---
+title: "Update Policy"
+description: "Update tenant's policy configuration"
+api: "PUT /v1/policy"
+---
+
+# Update Tenant Policy
+
+Update policy configuration for the authenticated tenant.
+
+## Endpoint
+
+```
+PUT /v1/policy
+```
+
+<Note>
+  Requires tenant authentication via JWT token. Only provided fields will be updated.
+</Note>
+
+## Request Headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `Authorization` | Yes | Bearer JWT token |
+| `Content-Type` | Yes | application/json |
+
+## Request Body
+
+All fields are optional. Only include fields you want to update.
+
+```json
+{
+  "max_monthly_cost_usd": 100.0,
+  "enable_budget_limit": true,
+  "fallback_on_budget_breach": true,
+  "max_tokens_per_request": 2048,
+  "enable_token_limit": true,
+  "enable_benchmark_fallback": true,
+  "max_requests_per_minute": 60,
+  "max_requests_per_hour": 1000,
+  "max_requests_per_day": 10000,
+  "enable_rate_limiting": true,
+  "alert_webhook_url": "https://hooks.slack.com/services/YOUR/WEBHOOK",
+  "alert_on_budget_80_percent": true,
+  "alert_on_budget_100_percent": true,
+  "alert_on_key_validation_failure": true
+}
+```
+
+## Request Parameters
+
+### Budget Controls
+| Parameter | Type | Validation | Description |
+|-----------|------|------------|-------------|
+| `max_monthly_cost_usd` | float | >= 0 | Maximum monthly spending in USD |
+| `enable_budget_limit` | boolean | - | Enable budget enforcement |
+| `fallback_on_budget_breach` | boolean | - | Auto-fallback on budget exceeded |
+
+### Token Limits
+| Parameter | Type | Validation | Description |
+|-----------|------|------------|-------------|
+| `max_tokens_per_request` | integer | 1-100000 | Maximum tokens per request |
+| `enable_token_limit` | boolean | - | Enable token limit enforcement |
+| `enable_benchmark_fallback` | boolean | - | Enable benchmark fallback |
+
+### Rate Limiting
+| Parameter | Type | Validation | Description |
+|-----------|------|------------|-------------|
+| `max_requests_per_minute` | integer | >= 0 or null | Max requests per minute |
+| `max_requests_per_hour` | integer | >= 0 or null | Max requests per hour |
+| `max_requests_per_day` | integer | >= 0 or null | Max requests per day |
+| `enable_rate_limiting` | boolean | - | Enable rate limiting |
+
+### Alert Settings
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `alert_webhook_url` | string | Webhook URL for alerts (null to disable) |
+| `alert_on_budget_80_percent` | boolean | Alert at 80% budget usage |
+| `alert_on_budget_100_percent` | boolean | Alert when budget exceeded |
+| `alert_on_key_validation_failure` | boolean | Alert on key validation failures |
+
+## Response
+
+Returns the updated complete policy:
+
+```json
+{
+  "tenant_id": "acme-corp",
+  "max_monthly_cost_usd": 100.0,
+  "enable_budget_limit": true,
+  "fallback_on_budget_breach": true,
+  "max_tokens_per_request": 2048,
+  "enable_token_limit": true,
+  "enable_benchmark_fallback": true,
+  "max_requests_per_minute": 60,
+  "max_requests_per_hour": 1000,
+  "max_requests_per_day": 10000,
+  "enable_rate_limiting": true,
+  "alert_webhook_url": "https://hooks.slack.com/services/YOUR/WEBHOOK",
+  "alert_on_budget_80_percent": true,
+  "alert_on_budget_100_percent": true,
+  "alert_on_key_validation_failure": true,
+  "created_at": "2025-10-01T12:00:00Z",
+  "updated_at": "2025-10-21T20:30:00Z",
+  "updated_by": "admin@acme.com"
+}
+```
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| `200` | Policy updated successfully |
+| `400` | Invalid request (validation failed) |
+| `401` | Unauthorized (invalid or expired token) |
+| `500` | Internal server error |
+
+## Example Requests
+
+<CodeGroup>
+
+```bash cURL - Increase Budget
+curl -X PUT http://localhost:8080/v1/policy \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "max_monthly_cost_usd": 500.0
+  }'
+```
+
+```bash cURL - Enable Rate Limiting
+curl -X PUT http://localhost:8080/v1/policy \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enable_rate_limiting": true,
+    "max_requests_per_minute": 100,
+    "max_requests_per_hour": 5000
+  }'
+```
+
+```python Python
+import requests
+
+# Update budget and token limits
+response = requests.put(
+    "http://localhost:8080/v1/policy",
+    headers={
+        "Authorization": "Bearer YOUR_JWT_TOKEN",
+        "Content-Type": "application/json"
+    },
+    json={
+        "max_monthly_cost_usd": 200.0,
+        "max_tokens_per_request": 4096,
+        "enable_budget_limit": True
+    }
+)
+
+updated_policy = response.json()
+print(f"New budget: ${updated_policy['max_monthly_cost_usd']}")
+```
+
+```javascript JavaScript
+// Enable alerts
+const response = await fetch('http://localhost:8080/v1/policy', {
+  method: 'PUT',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    alert_webhook_url: 'https://hooks.slack.com/services/YOUR/WEBHOOK',
+    alert_on_budget_80_percent: true,
+    alert_on_budget_100_percent: true
+  })
+});
+
+const policy = await response.json();
+console.log('Alerts enabled:', policy.alert_webhook_url);
+```
+
+</CodeGroup>
+
+## Common Use Cases
+
+### 1. Increase Monthly Budget
+```json
+{
+  "max_monthly_cost_usd": 1000.0
+}
+```
+
+### 2. Remove Token Limits
+```json
+{
+  "max_tokens_per_request": 100000,
+  "enable_token_limit": false
+}
+```
+
+### 3. Configure Rate Limiting
+```json
+{
+  "enable_rate_limiting": true,
+  "max_requests_per_minute": 100,
+  "max_requests_per_hour": 5000,
+  "max_requests_per_day": 50000
+}
+```
+
+### 4. Set Up Slack Alerts
+```json
+{
+  "alert_webhook_url": "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXX",
+  "alert_on_budget_80_percent": true,
+  "alert_on_budget_100_percent": true,
+  "alert_on_key_validation_failure": true
+}
+```
+
+### 5. Disable Budget Enforcement (Development)
+```json
+{
+  "enable_budget_limit": false,
+  "enable_token_limit": false,
+  "enable_rate_limiting": false
+}
+```
+
+## Validation Errors
+
+### Invalid Budget
+```json
+{
+  "error": {
+    "message": "max_monthly_cost_usd must be non-negative",
+    "type": "validation_error",
+    "code": "INVALID_POLICY"
+  }
+}
+```
+
+### Invalid Token Limit
+```json
+{
+  "error": {
+    "message": "max_tokens_per_request must be between 1 and 100000",
+    "type": "validation_error",
+    "code": "INVALID_POLICY"
+  }
+}
+```
+
+## Policy Change Audit
+
+All policy changes are logged in the audit trail:
+
+```bash
+# View policy change history
+GET /v1/policy/history
+```
+
+## Best Practices
+
+1. **Start Conservative**
+   ```
+   Begin with low limits and increase based on actual usage
+   ```
+
+2. **Enable Alerts**
+   ```
+   Always configure webhook alerts for budget thresholds
+   ```
+
+3. **Test in Development**
+   ```
+   Use lower limits in development/staging environments
+   ```
+
+4. **Review Monthly**
+   ```
+   Review and adjust policy based on usage patterns
+   ```
+
+## Related Endpoints
+
+- [Get Policy](/api/policy/get) - View current policy
+- [Reset Policy](/api/policy/reset) - Reset to defaults
+- [Policy History](/api/policy/history) - View change history
+- [Get Usage](/api/usage/current) - Monitor usage against policy

@@ -1,0 +1,161 @@
+graph TB
+    subgraph "Client Layer"
+        A[Client Application]
+    end
+
+    subgraph "API Gateway Layer"
+        B[Fiber HTTP Server]
+        C[Middleware Stack]
+        C1[Recovery & CORS]
+        C2[Trace ID Generation]
+        C3[Request Logger]
+        C4[Metrics Recording]
+        C5[Tenant Auth - Optional]
+    end
+
+    subgraph "Multi-Tenancy Layer - Phase 14"
+        MT1[Tenant Management]
+        MT2[Vault Key Storage]
+        MT3[Per-Tenant Policies]
+        MT4[JWT Authentication]
+    end
+
+    subgraph "Safety & Control - Phase 12/13"
+        D[Safety Controller]
+        D1[Budget Tracker]
+        D2[Token Enforcer]
+        D3[Key Validator]
+        D4[Audit Logger]
+        D5[Budget Persistence]
+    end
+
+    subgraph "Routing Engine"
+        E{Optimizer Mode}
+        F[Go Router]
+        G[Rust Thompson Sampling]
+        H[Shadow Runner]
+        I[SLO Breaker]
+    end
+
+    subgraph "Provider Layer"
+        J[Provider Registry]
+        J1[OpenAI Provider]
+        J2[Anthropic Provider]
+        J3[Benchmark Provider - Phase 11]
+    end
+
+    subgraph "External Services"
+        K1[OpenAI API]
+        K2[Anthropic API]
+    end
+
+    subgraph "Data & Persistence"
+        L1[(PostgreSQL)]
+        L1A[Budgets Table]
+        L1B[Spending Log]
+        L1C[Policy Settings]
+        L2[(Redis Cache)]
+        L2A[ML Predictions]
+    end
+
+    subgraph "Observability"
+        M1[Prometheus Metrics]
+        M2[Distributed Tracing]
+        M3[Audit Logs]
+        M4[Metrics Collector]
+        M5[Cost Tracker]
+    end
+
+    %% Main request flow
+    A -->|HTTP/JSON| B
+    B --> C
+    C --> C1
+    C --> C2
+    C --> C3
+    C --> C4
+
+    %% Optional multi-tenancy path
+    C5 -.->|If Enabled| MT1
+    MT1 --> MT2
+    MT1 --> MT3
+    MT3 --> MT4
+
+    %% Middleware to Safety
+    C --> D
+
+    %% Safety components
+    D --> D1
+    D --> D2
+    D --> D3
+    D --> D4
+    D --> D5
+
+    %% Safety to Routing
+    D --> E
+
+    %% Routing modes
+    E -->|Go Mode| F
+    E -->|Rust Mode| G
+    E -->|Shadow Mode| H
+
+    %% SLO Breaker monitors and can revert
+    I -.->|Monitors & Reverts| E
+    G --> I
+    H --> I
+
+    %% Routing to Providers
+    F --> J
+    G --> J
+    H --> J
+
+    %% Provider registry to providers
+    J --> J1
+    J --> J2
+    J --> J3
+
+    %% Providers to external services
+    J1 -->|Real Mode| K1
+    J2 -->|Real Mode| K2
+
+    %% Database connections
+    D1 --> L1A
+    D5 --> L1A
+    D5 --> L1B
+    MT3 --> L1C
+
+    %% Redis caching
+    J --> L2A
+
+    %% Observability connections
+    C4 --> M1
+    C2 --> M2
+    D4 --> M3
+    J --> M4
+    D1 --> M5
+
+    %% Cost tracking
+    M5 --> D1
+
+    %% Styling - Core Components
+    style A fill:#007AFF,stroke:#005BBB,color:#fff
+    style B fill:#34C759,stroke:#28A745,color:#fff
+    style D fill:#FF9500,stroke:#CC7700,color:#fff
+    style E fill:#AF52DE,stroke:#8B3DAB,color:#fff
+    style J fill:#5856D6,stroke:#4644B3,color:#fff
+
+    %% Styling - Data Layer
+    style L1 fill:#FF3B30,stroke:#CC2F26,color:#fff
+    style L2 fill:#FF3B30,stroke:#CC2F26,color:#fff
+
+    %% Styling - Observability
+    style M1 fill:#007AFF,stroke:#005BBB,color:#fff
+    style M4 fill:#007AFF,stroke:#005BBB,color:#fff
+
+    %% Styling - Multi-Tenancy (Optional)
+    style MT1 fill:#5AC8FA,stroke:#32ADE6,color:#fff,stroke-dasharray: 5 5
+    style MT2 fill:#5AC8FA,stroke:#32ADE6,color:#fff,stroke-dasharray: 5 5
+    style MT3 fill:#5AC8FA,stroke:#32ADE6,color:#fff,stroke-dasharray: 5 5
+
+    %% Styling - Important Components
+    style I fill:#FFCC00,stroke:#FF9500,color:#000
+    style D4 fill:#FFCC00,stroke:#FF9500,color:#000

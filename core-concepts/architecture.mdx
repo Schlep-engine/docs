@@ -1,0 +1,177 @@
+---
+title: "Architecture"
+description: "Understanding Schlep-engine's hybrid polyglot architecture and core components"
+---
+
+# Architecture Overview
+
+Schlep-engine is built with a hybrid polyglot architecture combining Go, Rust, and Python for optimal performance and flexibility.
+
+## System Architecture
+
+The system architecture diagram is available as a Mermaid diagram in `/public/architecture/system-architecture.mmd`.
+
+## Core Components
+
+### API Gateway (Go/Fiber)
+
+The entry point for all HTTP requests. Built with Fiber for high-performance HTTP handling.
+
+**Responsibilities**:
+- Request routing
+- Middleware chain execution
+- Error handling
+- Response formatting
+
+### Inference Handler
+
+Processes inference requests and coordinates between components.
+
+**Flow**:
+1. Parse and validate request
+2. Run safety checks
+3. Select provider via router/optimizer
+4. Execute inference
+5. Record metrics
+6. Return response
+
+### Safety Controller
+
+Enforces limits and policies before requests are processed.
+
+**Checks**:
+- Token limits (max tokens per request)
+- Budget limits (monthly spending caps)
+- Rate limits (requests per minute/hour/day)
+- API key validation
+
+### Thompson Sampling Optimizer (Rust)
+
+Machine learning algorithm for intelligent provider selection.
+
+**How it works**:
+1. Maintains Beta distribution for each provider (α successes, β failures)
+2. Samples from each distribution
+3. Selects provider with highest sample
+4. Updates distribution based on outcome
+
+**Advantages**:
+- Balances exploration vs exploitation
+- Adapts to changing provider performance
+- Handles multiple optimization goals
+
+### Provider Interface
+
+Abstraction layer for all LLM providers.
+
+```go
+type Provider interface {
+    Name() string
+    Infer(ctx context.Context, req *InferRequest) (*InferResponse, error)
+    InferStream(ctx context.Context, req *InferRequest) (<-chan *StreamChunk, <-chan error)
+    HealthCheck(ctx context.Context) error
+    EstimateCost(req *InferRequest) (float64, error)
+}
+```
+
+### Key Vault (Multi-Tenancy)
+
+Secure storage for tenant API keys using AES-256-GCM encryption.
+
+**Features**:
+- Per-tenant key isolation
+- Encrypted at rest
+- Key rotation support
+- Validation tracking
+
+## Request Flow
+
+### Standard Inference Request
+
+```
+1. Client sends POST /v1/infer with request payload
+2. API Gateway receives and routes to InferHandler
+3. Middleware chain:
+   - CORS validation
+   - Trace ID generation
+   - Authentication (if multi-tenancy enabled)
+   - Metrics recording
+4. InferHandler validates request schema
+5. Safety Controller runs pre-request checks:
+   - Token count validation
+   - Budget check
+   - Rate limit check
+6. Router selects provider:
+   - Go Router: Weighted selection
+   - Rust Optimizer: Thompson Sampling
+   - Shadow: Both (log comparison)
+7. Provider executes inference with external API
+8. Response returned with metadata:
+   - Provider used
+   - Latency
+   - Cost
+   - Trace ID
+9. Metrics updated:
+   - Prometheus counters/histograms
+   - Optimizer feedback (if Rust)
+   - Audit log (if multi-tenancy)
+10. Response sent to client
+```
+
+## Technology Stack
+
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **API Server** | Go + Fiber | High-performance HTTP handling |
+| **Optimizer** | Rust | Thompson Sampling (FFI integration) |
+| **ML Service** | Python + gRPC | Advanced ML features (future) |
+| **Database** | PostgreSQL | Multi-tenancy, budgets, audit logs |
+| **Cache** | Redis | Response caching (future) |
+| **Metrics** | Prometheus | Time-series metrics |
+| **Tracing** | OpenTelemetry | Distributed tracing |
+
+## Deployment Modes
+
+### Mock Mode
+- Simple mock responses
+- No external API calls
+- Fixed latency
+- **Best for**: Unit testing
+
+### Benchmark Mode
+- Realistic provider simulation
+- Accurate pricing and latency models
+- No API keys required
+- **Best for**: Load testing, development
+
+### Real Mode
+- Actual provider API calls
+- Requires valid API keys
+- Production performance
+- **Best for**: Production
+
+### Hybrid Mode
+- Mix of benchmark and real providers
+- Gradual migration support
+- **Best for**: Testing with partial production data
+
+## Scalability
+
+Schlep-engine is designed for horizontal scalability:
+
+- **Stateless API servers**: Scale API pods independently
+- **Shared database**: PostgreSQL for state
+- **Distributed metrics**: Prometheus federation
+- **Load balancing**: Standard HTTP load balancers
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Thompson Sampling Deep Dive" icon="brain" href="/core-concepts/thompson-sampling">
+    Learn how the optimizer works
+  </Card>
+
+  <Card title="Configuration Guide" icon="gear" href="/configuration/environment-variables">
+    Configure your deployment
+  </Card>
+</CardGroup>

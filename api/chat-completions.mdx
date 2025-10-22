@@ -1,0 +1,179 @@
+---
+title: "Chat Completions"
+description: "OpenAI-compatible chat completions endpoint"
+api: "POST /v1/chat/completions"
+---
+
+# Chat Completions
+
+OpenAI-compatible endpoint for chat completions (alias for `/v1/infer`).
+
+## Endpoint
+
+```
+POST /v1/chat/completions
+```
+
+This endpoint is fully compatible with the OpenAI Chat Completions API, allowing you to use existing OpenAI client libraries.
+
+## Request
+
+```json
+{
+  "model": "gpt-4",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant."
+    },
+    {
+      "role": "user",
+      "content": "What is machine learning?"
+    }
+  ],
+  "temperature": 0.7,
+  "max_tokens": 500
+}
+```
+
+## Request Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `model` | string | Yes | Model name (e.g., "gpt-4", "claude-3-opus") |
+| `messages` | array | Yes | Array of message objects with role and content |
+| `temperature` | float | No | Sampling temperature 0.0-2.0 (default: 1.0) |
+| `max_tokens` | integer | No | Maximum tokens to generate (default: 1000) |
+| `stream` | boolean | No | Enable streaming responses (default: false) |
+| `top_p` | float | No | Nucleus sampling parameter (default: 1.0) |
+| `frequency_penalty` | float | No | Frequency penalty -2.0 to 2.0 (default: 0) |
+| `presence_penalty` | float | No | Presence penalty -2.0 to 2.0 (default: 0) |
+
+## Response
+
+```json
+{
+  "id": "chatcmpl-abc123",
+  "object": "chat.completion",
+  "created": 1729347296,
+  "model": "gpt-4",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Machine learning is a subset of artificial intelligence..."
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 25,
+    "completion_tokens": 150,
+    "total_tokens": 175
+  }
+}
+```
+
+## Example with OpenAI Python SDK
+
+You can use the OpenAI Python SDK by changing the base URL:
+
+```python
+from openai import OpenAI
+
+# Point to Schlep-engine
+client = OpenAI(
+    base_url="http://localhost:8080/v1",
+    api_key="YOUR_API_KEY"  # If multi-tenancy is enabled
+)
+
+response = client.chat.completions.create(
+    model="gpt-4",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Explain quantum computing"}
+    ],
+    max_tokens=200
+)
+
+print(response.choices[0].message.content)
+```
+
+## Example with OpenAI Node.js SDK
+
+```javascript
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  baseURL: 'http://localhost:8080/v1',
+  apiKey: 'YOUR_API_KEY'
+});
+
+const response = await openai.chat.completions.create({
+  model: 'gpt-4',
+  messages: [
+    { role: 'system', content: 'You are a helpful assistant.' },
+    { role: 'user', content: 'Explain quantum computing' }
+  ],
+  max_tokens: 200
+});
+
+console.log(response.choices[0].message.content);
+```
+
+## Streaming Responses
+
+Enable streaming for real-time responses:
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:8080/v1",
+    api_key="YOUR_API_KEY"
+)
+
+stream = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Tell me a story"}],
+    stream=True
+)
+
+for chunk in stream:
+    if chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end='')
+```
+
+## Benefits of Using Schlep-engine
+
+When using this endpoint through Schlep-engine, you get:
+
+1. **Intelligent Routing**: Thompson Sampling selects the best provider
+2. **Cost Optimization**: Automatic routing to cost-effective providers
+3. **Failover**: Automatic fallback if primary provider fails
+4. **Monitoring**: Built-in metrics and tracing
+5. **Budget Control**: Per-tenant spending limits
+
+## Differences from OpenAI API
+
+The response includes additional metadata:
+
+```json
+{
+  "metadata": {
+    "provider": "openai",
+    "latency_ms": 234,
+    "cost_usd": 0.00171,
+    "route_decision": "thompson-sampling",
+    "trace_id": "550e8400-e29b-41d4-a716-446655440000"
+  }
+}
+```
+
+This metadata provides insights into:
+- Which provider handled the request
+- Actual latency
+- Calculated cost
+- Routing decision method
+- Trace ID for debugging

@@ -1,0 +1,155 @@
+---
+title: "Create Tenant"
+description: "Create a new tenant account"
+api: "POST /v1/tenants"
+---
+
+# Create Tenant
+
+Create a new tenant account with isolated resources and API key.
+
+## Endpoint
+
+```
+POST /v1/tenants
+```
+
+<Note>
+  Requires admin authentication via `X-Admin-Token` header.
+</Note>
+
+## Request
+
+```json
+{
+  "tenant_id": "acme-corp",
+  "tenant_name": "Acme Corporation",
+  "email": "admin@acme.com",
+  "company": "Acme Corp"
+}
+```
+
+## Request Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `tenant_id` | string | Yes | Unique tenant identifier (lowercase, alphanumeric, hyphens) |
+| `tenant_name` | string | Yes | Display name for the tenant |
+| `email` | string | Yes | Primary contact email |
+| `company` | string | No | Company name |
+
+## Response
+
+```json
+{
+  "tenant_id": "acme-corp",
+  "api_key": "schlep_1a2b3c4d5e6f7g8h9i0j...",
+  "api_key_prefix": "schlep_1a2b",
+  "tenant_name": "Acme Corporation",
+  "email": "admin@acme.com",
+  "company": "Acme Corp",
+  "status": "active",
+  "created_at": "2025-10-21T12:00:00Z",
+  "settings": {
+    "max_monthly_budget_usd": 100.0,
+    "max_requests_per_minute": 100
+  }
+}
+```
+
+<Warning>
+  The `api_key` is only shown once. Store it securely - it cannot be retrieved later.
+</Warning>
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| `201` | Tenant created successfully |
+| `400` | Invalid request (missing fields, invalid tenant_id format) |
+| `401` | Unauthorized (missing or invalid admin token) |
+| `409` | Conflict (tenant_id already exists) |
+| `500` | Internal server error |
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST http://localhost:8080/v1/tenants \
+  -H "Content-Type: application/json" \
+  -H "X-Admin-Token: YOUR_ADMIN_TOKEN" \
+  -d '{
+    "tenant_id": "acme-corp",
+    "tenant_name": "Acme Corporation",
+    "email": "admin@acme.com",
+    "company": "Acme Corp"
+  }'
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    "http://localhost:8080/v1/tenants",
+    headers={
+        "Content-Type": "application/json",
+        "X-Admin-Token": "YOUR_ADMIN_TOKEN"
+    },
+    json={
+        "tenant_id": "acme-corp",
+        "tenant_name": "Acme Corporation",
+        "email": "admin@acme.com",
+        "company": "Acme Corp"
+    }
+)
+
+tenant = response.json()
+print(f"API Key: {tenant['api_key']}")
+print(f"Save this key - it won't be shown again!")
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:8080/v1/tenants', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-Admin-Token': 'YOUR_ADMIN_TOKEN'
+  },
+  body: JSON.stringify({
+    tenant_id: 'acme-corp',
+    tenant_name: 'Acme Corporation',
+    email: 'admin@acme.com',
+    company: 'Acme Corp'
+  })
+});
+
+const tenant = await response.json();
+console.log(`API Key: ${tenant.api_key}`);
+```
+
+</CodeGroup>
+
+## What Happens When You Create a Tenant
+
+1. **Tenant Record**: Created in `tenants` table with status `active`
+2. **API Key**: Generated and hashed (SHA-256) for authentication
+3. **Default Policy**: Created with default budget and rate limits
+4. **Budget**: Initial monthly budget of $100 (configurable)
+5. **Audit Log**: Creation event logged
+
+## Next Steps
+
+After creating a tenant:
+
+1. **Save the API Key**: Store it in a secure location (password manager, secrets vault)
+2. **Configure BYOK Keys**: Add provider API keys to the key vault
+3. **Set Policies**: Adjust budget limits and rate limits as needed
+4. **Test Authentication**: Verify the tenant can authenticate and make requests
+
+## Related Endpoints
+
+- [List Tenants](/api/tenants/list) - Get all tenants
+- [Get Tenant](/api/tenants/get) - Get tenant details
+- [Update Tenant](/api/tenants/update) - Update tenant information
+- [Store API Key](/api/vault/store) - Add provider API keys

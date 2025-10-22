@@ -1,0 +1,279 @@
+---
+title: "Multi-Tenancy Overview"
+description: "Complete tenant isolation with BYOK encryption and per-tenant policies"
+---
+
+# Multi-Tenancy
+
+Schlep-engine provides enterprise-grade multi-tenancy with complete tenant isolation, secure key management, and granular policies.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Bring Your Own Key (BYOK)" icon="key">
+    Store tenant API keys with AES-256-GCM encryption
+  </Card>
+
+  <Card title="JWT Authentication" icon="shield-check">
+    Secure token-based authentication for each tenant
+  </Card>
+
+  <Card title="Per-Tenant Policies" icon="sliders">
+    Budgets, rate limits, and custom rules per tenant
+  </Card>
+
+  <Card title="Audit Logging" icon="list-check">
+    Complete audit trail of all tenant actions
+  </Card>
+</CardGroup>
+
+## Architecture
+
+```
+Tenant A                    Tenant B                    Tenant C
+   ↓                           ↓                           ↓
+JWT Token                  JWT Token                  JWT Token
+   ↓                           ↓                           ↓
+   └─────────────────────────┬─────────────────────────┘
+                             ↓
+                    Schlep-engine API
+                             ↓
+                   ┌─────────┴─────────┐
+                   ↓                   ↓
+            Tenant Auth          Key Vault
+             Middleware        (AES-256-GCM)
+                   ↓                   ↓
+            ┌──────┴──────┐     ┌─────┴─────┐
+            ↓             ↓     ↓           ↓
+        Budget       Rate Limit  OpenAI   Anthropic
+        Policy       Policy      Key      Key
+            ↓             ↓     ↓           ↓
+            └──────┬──────┘     └─────┬─────┘
+                   ↓                  ↓
+              Inference          Provider APIs
+                   ↓
+              Audit Log
+```
+
+## Enabling Multi-Tenancy
+
+### Prerequisites
+
+- PostgreSQL database
+- JWT secret (64-character hex)
+- Vault master key (64-character hex)
+
+### Configuration
+
+Set environment variables:
+
+```bash
+export ENABLE_MULTI_TENANCY=true
+export DATABASE_URL="postgresql://user:pass@localhost:5432/schlep"
+export JWT_SECRET="your-64-char-hex-secret"
+export VAULT_MASTER_KEY="your-64-char-hex-master-key"
+```
+
+Generate secrets:
+
+```bash
+# Generate JWT secret
+export JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_hex(32))")
+
+# Generate vault master key
+export VAULT_MASTER_KEY=$(python3 -c "import secrets; print(secrets.token_hex(32))")
+```
+
+### Run Database Migrations
+
+```bash
+psql -U user -d schlep -f scripts/migrations/002_multi_tenancy.sql
+```
+
+## Creating a Tenant
+
+### API Request
+
+```bash
+POST /v1/tenants
+Content-Type: application/json
+
+{
+  "tenant_id": "acme-corp",
+  "tenant_name": "Acme Corporation",
+  "email": "admin@acme.com",
+  "company": "Acme Corp"
+}
+```
+
+### Response
+
+```json
+{
+  "tenant_id": "acme-corp",
+  "api_key": "schlep_1a2b3c4d5e6f...",
+  "api_key_prefix": "schlep_1a2b",
+  "tenant_name": "Acme Corporation",
+  "status": "active",
+  "created_at": "2025-10-21T12:00:00Z"
+}
+```
+
+<Warning>
+  Save the `api_key` immediately. It's only shown once and cannot be retrieved later.
+</Warning>
+
+## Authentication Flow
+
+### 1. Login with API Key
+
+```bash
+POST /v1/auth/login
+Content-Type: application/json
+
+{
+  "api_key": "schlep_1a2b3c4d5e6f..."
+}
+```
+
+### 2. Receive JWT Token
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expires_at": "2025-10-22T12:00:00Z",
+  "tenant_id": "acme-corp"
+}
+```
+
+### 3. Use Token for API Requests
+
+```bash
+POST /v1/infer
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+
+{
+  "model": "gpt-4",
+  "messages": [...]
+}
+```
+
+## Database Schema
+
+### Key Tables
+
+**tenants**
+- Tenant account information
+- API key hash (never plaintext)
+- Status (active, suspended, deleted)
+
+**tenant_keys**
+- Encrypted BYOK API keys
+- AES-256-GCM encryption
+- Per-provider (OpenAI, Anthropic)
+
+**tenant_sessions**
+- JWT session tracking
+- Token revocation
+- Activity monitoring
+
+**tenant_policies**
+- Budget limits
+- Rate limits
+- Token limits
+- Alert settings
+
+**audit_events**
+- Complete audit trail
+- Budget events
+- Key management
+- Policy changes
+
+## Security Features
+
+### Encryption at Rest
+
+All tenant API keys are encrypted using AES-256-GCM:
+
+- **Algorithm**: AES-256-GCM
+- **Key size**: 256 bits (32 bytes)
+- **IV**: Random 96 bits per operation
+- **Authentication**: GCM tag for integrity
+
+### Tenant Isolation
+
+- **Database level**: Foreign key constraints, filtered queries
+- **Application level**: Middleware extracts tenant_id from JWT
+- **API level**: All endpoints automatically scoped to tenant
+
+### Audit Trail
+
+Every action is logged:
+
+| Category | Examples |
+|----------|----------|
+| **Budget** | Budget exceeded, 80% threshold reached |
+| **Token** | Token limit enforced, tokens allowed |
+| **Key Management** | Key rotated, key validation failed |
+| **Policy** | Policy updated, budget limit changed |
+| **Tenant** | Tenant created, suspended, activated |
+
+## Tenant Management
+
+### List Tenants
+
+```bash
+GET /v1/tenants
+Authorization: Bearer ADMIN_TOKEN
+```
+
+### Get Tenant Details
+
+```bash
+GET /v1/tenants/{tenant_id}
+Authorization: Bearer ADMIN_TOKEN
+```
+
+### Update Tenant
+
+```bash
+PUT /v1/tenants/{tenant_id}
+Authorization: Bearer ADMIN_TOKEN
+Content-Type: application/json
+
+{
+  "tenant_name": "Updated Name",
+  "email": "new@email.com"
+}
+```
+
+### Suspend Tenant
+
+```bash
+POST /v1/tenants/{tenant_id}/suspend
+Authorization: Bearer ADMIN_TOKEN
+```
+
+### Delete Tenant
+
+```bash
+DELETE /v1/tenants/{tenant_id}
+Authorization: Bearer ADMIN_TOKEN
+```
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="BYOK Setup" icon="key" href="/multi-tenancy/byok">
+    Configure Bring Your Own Key
+  </Card>
+
+  <Card title="Policies" icon="sliders" href="/multi-tenancy/policies">
+    Set up tenant policies
+  </Card>
+
+  <Card title="Authentication" icon="shield" href="/multi-tenancy/authentication">
+    Implement JWT authentication
+  </Card>
+</CardGroup>

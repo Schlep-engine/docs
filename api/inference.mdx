@@ -1,0 +1,273 @@
+---
+title: "Inference"
+description: "Core API endpoints for LLM inference requests"
+api: "POST /v1/infer"
+---
+
+# Inference API
+
+The inference API is the primary interface for making LLM requests through Schlep-engine.
+
+## POST /v1/infer
+
+Main inference endpoint for LLM requests.
+
+### Request
+
+```json
+{
+  "model": "gpt-4",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Explain quantum computing"
+    }
+  ],
+  "max_tokens": 500,
+  "temperature": 0.7
+}
+```
+
+### Request Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `model` | string | Yes | Model name (e.g., "gpt-4", "claude-3-opus") |
+| `messages` | array | Yes | Array of message objects with role and content |
+| `max_tokens` | integer | No | Maximum tokens to generate (default: 1000) |
+| `temperature` | float | No | Sampling temperature 0.0-2.0 (default: 1.0) |
+| `stream` | boolean | No | Enable streaming responses (default: false) |
+
+### Response
+
+```json
+{
+  "id": "chatcmpl-abc123",
+  "object": "chat.completion",
+  "created": 1729347296,
+  "model": "gpt-4",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Quantum computing is..."
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 15,
+    "completion_tokens": 42,
+    "total_tokens": 57
+  },
+  "metadata": {
+    "provider": "openai",
+    "latency_ms": 234,
+    "cost_usd": 0.00171,
+    "route_decision": "thompson-sampling",
+    "trace_id": "550e8400-e29b-41d4-a716-446655440000"
+  }
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique request identifier |
+| `choices` | array | Array of completion choices |
+| `usage` | object | Token usage breakdown |
+| `metadata` | object | Schlep-engine specific metadata |
+| `metadata.provider` | string | Provider that handled the request |
+| `metadata.latency_ms` | number | Request latency in milliseconds |
+| `metadata.cost_usd` | number | Estimated cost in USD |
+| `metadata.route_decision` | string | Routing strategy used |
+| `metadata.trace_id` | string | Distributed tracing ID |
+
+### Status Codes
+
+| Code | Description |
+|------|-------------|
+| `200` | Success |
+| `400` | Invalid request format or parameters |
+| `401` | Unauthorized (multi-tenancy mode) |
+| `429` | Rate limit exceeded |
+| `500` | Internal server error |
+| `503` | Provider unavailable |
+
+### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST http://localhost:8080/v1/infer \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "model": "gpt-4",
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "max_tokens": 100
+  }'
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    "http://localhost:8080/v1/infer",
+    headers={
+        "Content-Type": "application/json",
+        "Authorization": "Bearer YOUR_TOKEN"
+    },
+    json={
+        "model": "gpt-4",
+        "messages": [{"role": "user", "content": "Hello!"}],
+        "max_tokens": 100
+    }
+)
+
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:8080/v1/infer', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_TOKEN'
+  },
+  body: JSON.stringify({
+    model: 'gpt-4',
+    messages: [{role: 'user', content: 'Hello!'}],
+    max_tokens: 100
+  })
+});
+
+const data = await response.json();
+console.log(data);
+```
+
+</CodeGroup>
+
+## POST /v1/chat/completions
+
+OpenAI-compatible endpoint (alias for `/v1/infer`).
+
+This endpoint provides compatibility with existing OpenAI client libraries. It accepts and returns the same format as `/v1/infer`.
+
+## GET /v1/models
+
+List available models.
+
+### Response
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "gpt-4",
+      "object": "model",
+      "provider": "openai"
+    },
+    {
+      "id": "gpt-3.5-turbo",
+      "object": "model",
+      "provider": "openai"
+    },
+    {
+      "id": "claude-3-opus",
+      "object": "model",
+      "provider": "anthropic"
+    }
+  ]
+}
+```
+
+## GET /v1/health
+
+Health check endpoint.
+
+### Response
+
+```json
+{
+  "status": "ok",
+  "service": "schlep-engine-api",
+  "version": "0.1.0-alpha",
+  "providers": {
+    "openai": "ok",
+    "anthropic": "ok"
+  }
+}
+```
+
+## Advanced Features
+
+### Provider Override
+
+You can force a specific provider using the `provider` field:
+
+```json
+{
+  "model": "gpt-4",
+  "provider": "openai",
+  "messages": [...]
+}
+```
+
+### Routing Policy
+
+Control routing behavior with policy overrides:
+
+```json
+{
+  "model": "gpt-4",
+  "messages": [...],
+  "policy": {
+    "optimization_goal": "latency",  // "latency", "cost", or "quality"
+    "max_latency_ms": 500,
+    "fallback_enabled": true
+  }
+}
+```
+
+## Error Responses
+
+### Budget Exceeded
+
+```json
+{
+  "error": {
+    "message": "Monthly budget of $10.00 exceeded",
+    "type": "budget_exceeded",
+    "code": "BUDGET_LIMIT"
+  }
+}
+```
+
+### Rate Limit
+
+```json
+{
+  "error": {
+    "message": "Rate limit of 100 requests/minute exceeded",
+    "type": "rate_limit_exceeded",
+    "code": "RATE_LIMIT",
+    "retry_after": 45
+  }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/multi-tenancy/authentication">
+    Learn about API authentication
+  </Card>
+
+  <Card title="Metrics API" icon="chart-line" href="/api/metrics">
+    Monitor your API usage
+  </Card>
+</CardGroup>

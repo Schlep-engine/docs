@@ -1,0 +1,188 @@
+---
+title: "Get Policy"
+description: "Retrieve tenant's active policy configuration"
+api: "GET /v1/policy"
+---
+
+# Get Tenant Policy
+
+Retrieve the current policy configuration for the authenticated tenant.
+
+## Endpoint
+
+```
+GET /v1/policy
+```
+
+<Note>
+  Requires tenant authentication via JWT token.
+</Note>
+
+## Request Headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `Authorization` | Yes | Bearer JWT token |
+
+## Response
+
+```json
+{
+  "tenant_id": "acme-corp",
+  "max_monthly_cost_usd": 100.0,
+  "enable_budget_limit": true,
+  "fallback_on_budget_breach": true,
+  "max_tokens_per_request": 2048,
+  "enable_token_limit": true,
+  "enable_benchmark_fallback": true,
+  "max_requests_per_minute": 60,
+  "max_requests_per_hour": 1000,
+  "max_requests_per_day": 10000,
+  "enable_rate_limiting": true,
+  "alert_webhook_url": "https://hooks.slack.com/services/YOUR/WEBHOOK",
+  "alert_on_budget_80_percent": true,
+  "alert_on_budget_100_percent": true,
+  "alert_on_key_validation_failure": true,
+  "created_at": "2025-10-01T12:00:00Z",
+  "updated_at": "2025-10-20T15:30:00Z",
+  "updated_by": "admin@acme.com"
+}
+```
+
+## Response Fields
+
+### Budget Controls
+| Field | Type | Description |
+|-------|------|-------------|
+| `max_monthly_cost_usd` | float | Maximum monthly spending in USD |
+| `enable_budget_limit` | boolean | Whether budget enforcement is enabled |
+| `fallback_on_budget_breach` | boolean | Auto-fallback to benchmark when budget exceeded |
+
+### Token Limits
+| Field | Type | Description |
+|-------|------|-------------|
+| `max_tokens_per_request` | integer | Maximum tokens per single request |
+| `enable_token_limit` | boolean | Whether token limiting is enabled |
+| `enable_benchmark_fallback` | boolean | Enable fallback to benchmark providers |
+
+### Rate Limiting
+| Field | Type | Description |
+|-------|------|-------------|
+| `max_requests_per_minute` | integer | Max requests per minute (null = unlimited) |
+| `max_requests_per_hour` | integer | Max requests per hour (null = unlimited) |
+| `max_requests_per_day` | integer | Max requests per day (null = unlimited) |
+| `enable_rate_limiting` | boolean | Whether rate limiting is enabled |
+
+### Alerts
+| Field | Type | Description |
+|-------|------|-------------|
+| `alert_webhook_url` | string | Webhook URL for alerts (null = disabled) |
+| `alert_on_budget_80_percent` | boolean | Alert at 80% budget usage |
+| `alert_on_budget_100_percent` | boolean | Alert when budget exceeded |
+| `alert_on_key_validation_failure` | boolean | Alert on API key validation failures |
+
+### Metadata
+| Field | Type | Description |
+|-------|------|-------------|
+| `tenant_id` | string | Tenant identifier |
+| `created_at` | string | When policy was first created |
+| `updated_at` | string | Last update timestamp |
+| `updated_by` | string | Who last updated the policy |
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| `200` | Success |
+| `401` | Unauthorized (invalid or expired token) |
+| `404` | Policy not found (defaults will be created) |
+| `500` | Internal server error |
+
+## Example Requests
+
+<CodeGroup>
+
+```bash cURL
+curl http://localhost:8080/v1/policy \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "http://localhost:8080/v1/policy",
+    headers={"Authorization": "Bearer YOUR_JWT_TOKEN"}
+)
+
+policy = response.json()
+print(f"Monthly budget: ${policy['max_monthly_cost_usd']}")
+print(f"Max tokens: {policy['max_tokens_per_request']}")
+print(f"Rate limit: {policy['max_requests_per_minute']} req/min")
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:8080/v1/policy', {
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+});
+
+const policy = await response.json();
+console.log(`Monthly budget: $${policy.max_monthly_cost_usd}`);
+console.log(`Max tokens: ${policy.max_tokens_per_request}`);
+```
+
+</CodeGroup>
+
+## Default Policy
+
+If no policy exists for a tenant, the following defaults are applied:
+
+```json
+{
+  "max_monthly_cost_usd": 5.0,
+  "enable_budget_limit": true,
+  "fallback_on_budget_breach": true,
+  "max_tokens_per_request": 1024,
+  "enable_token_limit": true,
+  "enable_benchmark_fallback": true,
+  "max_requests_per_minute": null,
+  "max_requests_per_hour": null,
+  "max_requests_per_day": null,
+  "enable_rate_limiting": false,
+  "alert_webhook_url": null,
+  "alert_on_budget_80_percent": false,
+  "alert_on_budget_100_percent": false,
+  "alert_on_key_validation_failure": false
+}
+```
+
+## Understanding Policy Fields
+
+### Budget Enforcement
+When `enable_budget_limit` is true:
+1. Every request cost is tracked
+2. Monthly cumulative spend is calculated
+3. When `max_monthly_cost_usd` is exceeded:
+   - If `fallback_on_budget_breach` is true: requests use free benchmark providers
+   - If false: requests are rejected with 403 error
+
+### Token Limiting
+When `enable_token_limit` is true:
+- Requests exceeding `max_tokens_per_request` are rejected
+- Prevents accidental large requests that drain budgets
+- Applies to both prompt and completion tokens combined
+
+### Rate Limiting
+When `enable_rate_limiting` is true:
+- Requests are counted per time window
+- If any limit is exceeded, requests are rejected with 429 error
+- Limits are applied in order: minute → hour → day
+
+## Related Endpoints
+
+- [Update Policy](/api/policy/update) - Modify policy settings
+- [Reset Policy](/api/policy/reset) - Reset to defaults
+- [Policy History](/api/policy/history) - View policy change history
+- [Get Usage](/api/usage/current) - Check current usage against policy

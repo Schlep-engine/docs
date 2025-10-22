@@ -1,0 +1,213 @@
+---
+title: "Logout"
+description: "Revoke JWT token and end authenticated session"
+api: "POST /v1/auth/logout"
+---
+
+# Logout
+
+Revoke the current JWT token and end the authenticated session.
+
+## Endpoint
+
+```
+POST /v1/auth/logout
+```
+
+<Note>
+  Requires a valid JWT token in the Authorization header.
+</Note>
+
+## Request Headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `Authorization` | Yes | Bearer JWT token to revoke |
+
+## Request
+
+No request body required.
+
+## Response
+
+```json
+{
+  "message": "Successfully logged out",
+  "token_revoked": true,
+  "tenant_id": "acme-corp"
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `message` | string | Success message |
+| `token_revoked` | boolean | Whether token was revoked |
+| `tenant_id` | string | Tenant identifier |
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| `200` | Logout successful, token revoked |
+| `401` | Invalid or already revoked token |
+| `500` | Internal server error |
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST http://localhost:8080/v1/auth/logout \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    "http://localhost:8080/v1/auth/logout",
+    headers={
+        "Authorization": "Bearer YOUR_JWT_TOKEN"
+    }
+)
+
+print(response.json()["message"])
+# Clear local token storage
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:8080/v1/auth/logout', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+});
+
+const data = await response.json();
+console.log(data.message);
+
+// Clear local storage
+localStorage.removeItem('jwt_token');
+localStorage.removeItem('token_expires_at');
+```
+
+</CodeGroup>
+
+## Token Revocation
+
+### What Happens on Logout
+
+1. **Token Added to Revocation List**
+   - Token ID (JTI) stored in database
+   - All subsequent requests with this token will be rejected
+
+2. **Session Tracking Updated** (if `TRACK_JWT_SESSIONS=true`)
+   - Session marked as ended
+   - Logout timestamp recorded
+
+3. **Token Remains Invalid**
+   - Even before natural expiration
+   - Cannot be refreshed after logout
+
+### Logout All Sessions
+
+To logout from all sessions (revoke all tokens for a tenant):
+
+```bash
+POST /v1/tenants/:tenant_id/logout-all
+```
+
+This is useful for:
+- Security incidents
+- Password changes
+- Suspicious activity
+
+## Client-Side Cleanup
+
+After logout, ensure you:
+
+```javascript
+// 1. Clear authentication state
+function logout() {
+  // Call API
+  await fetch('/v1/auth/logout', {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  // 2. Clear storage
+  localStorage.removeItem('jwt_token');
+  localStorage.removeItem('token_expires_at');
+  sessionStorage.clear();
+
+  // 3. Clear in-memory state
+  currentUser = null;
+  isAuthenticated = false;
+
+  // 4. Redirect to login
+  window.location.href = '/login';
+}
+```
+
+## Security Best Practices
+
+1. **Always Call Logout**
+   ```
+   Never just clear local storage without calling the API
+   Revoked tokens prevent replay attacks
+   ```
+
+2. **Handle Network Failures**
+   ```javascript
+   try {
+     await logout();
+   } catch (error) {
+     // Still clear local state even if API call fails
+     clearLocalAuthState();
+   }
+   ```
+
+3. **Logout on Inactivity**
+   ```javascript
+   let inactivityTimer;
+   const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+
+   function resetInactivityTimer() {
+     clearTimeout(inactivityTimer);
+     inactivityTimer = setTimeout(logout, INACTIVITY_TIMEOUT);
+   }
+
+   // Reset on user activity
+   document.addEventListener('mousemove', resetInactivityTimer);
+   document.addEventListener('keypress', resetInactivityTimer);
+   ```
+
+4. **Logout on Tab Close** (Optional)
+   ```javascript
+   window.addEventListener('beforeunload', () => {
+     // Note: This may not always work due to browser restrictions
+     navigator.sendBeacon('/v1/auth/logout', JSON.stringify({ token }));
+   });
+   ```
+
+## Error Responses
+
+### Already Logged Out
+
+```json
+{
+  "error": {
+    "message": "Token already revoked or invalid",
+    "type": "token_invalid",
+    "code": "TOKEN_INVALID"
+  }
+}
+```
+
+## Related Endpoints
+
+- [Login](/api/auth/login) - Authenticate and get JWT token
+- [Refresh Token](/api/auth/refresh) - Refresh expiring token
+- [Get Tenant](/api/tenants/get) - View tenant information

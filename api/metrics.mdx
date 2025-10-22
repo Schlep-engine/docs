@@ -1,0 +1,182 @@
+---
+title: "Metrics"
+description: "Get aggregated metrics and performance data"
+api: "GET /v1/metrics"
+---
+
+# Metrics API
+
+Retrieve aggregated metrics and performance data for inference requests.
+
+## Endpoint
+
+```
+GET /v1/metrics
+```
+
+## Response
+
+```json
+{
+  "provider_metrics": {
+    "openai": {
+      "gpt-4": {
+        "request_count": 1523,
+        "success_count": 1520,
+        "avg_latency_ms": 234.5,
+        "p95_latency_ms": 420.0,
+        "p99_latency_ms": 650.0,
+        "total_cost_usd": 0.9136,
+        "error_rate": 0.002
+      },
+      "gpt-3.5-turbo": {
+        "request_count": 3421,
+        "success_count": 3418,
+        "avg_latency_ms": 145.2,
+        "p95_latency_ms": 280.0,
+        "p99_latency_ms": 450.0,
+        "total_cost_usd": 0.2567,
+        "error_rate": 0.001
+      }
+    },
+    "anthropic": {
+      "claude-3-5-sonnet": {
+        "request_count": 892,
+        "success_count": 890,
+        "avg_latency_ms": 198.3,
+        "p95_latency_ms": 350.0,
+        "p99_latency_ms": 520.0,
+        "total_cost_usd": 0.4521,
+        "error_rate": 0.002
+      }
+    }
+  },
+  "timestamp": 1729347296,
+  "trace_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `provider_metrics` | object | Metrics grouped by provider and model |
+| `request_count` | integer | Total number of requests |
+| `success_count` | integer | Number of successful requests |
+| `avg_latency_ms` | number | Average latency in milliseconds |
+| `p95_latency_ms` | number | 95th percentile latency |
+| `p99_latency_ms` | number | 99th percentile latency |
+| `total_cost_usd` | number | Total cost in USD |
+| `error_rate` | number | Error rate (0.0-1.0) |
+| `timestamp` | integer | Unix timestamp |
+| `trace_id` | string | Request trace ID |
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| `200` | Success |
+| `401` | Unauthorized (multi-tenancy mode) |
+| `500` | Internal server error |
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl http://localhost:8080/v1/metrics \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "http://localhost:8080/v1/metrics",
+    headers={"Authorization": "Bearer YOUR_TOKEN"}
+)
+
+metrics = response.json()
+print(f"Total requests: {sum(m['request_count'] for p in metrics['provider_metrics'].values() for m in p.values())}")
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:8080/v1/metrics', {
+  headers: {
+    'Authorization': 'Bearer YOUR_TOKEN'
+  }
+});
+
+const metrics = await response.json();
+console.log(metrics.provider_metrics);
+```
+
+</CodeGroup>
+
+## Use Cases
+
+### Monitor Performance
+
+Track average latency across providers:
+
+```python
+response = requests.get("http://localhost:8080/v1/metrics")
+metrics = response.json()
+
+for provider, models in metrics["provider_metrics"].items():
+    for model, stats in models.items():
+        print(f"{provider}/{model}: {stats['avg_latency_ms']}ms")
+```
+
+### Cost Analysis
+
+Calculate total spending:
+
+```python
+response = requests.get("http://localhost:8080/v1/metrics")
+metrics = response.json()
+
+total_cost = sum(
+    stats["total_cost_usd"]
+    for provider in metrics["provider_metrics"].values()
+    for stats in provider.values()
+)
+
+print(f"Total spend: ${total_cost:.2f}")
+```
+
+### Error Rate Monitoring
+
+Alert on high error rates:
+
+```python
+response = requests.get("http://localhost:8080/v1/metrics")
+metrics = response.json()
+
+for provider, models in metrics["provider_metrics"].items():
+    for model, stats in models.items():
+        if stats["error_rate"] > 0.05:  # 5% threshold
+            print(f"⚠️ High error rate: {provider}/{model} ({stats['error_rate']*100:.1f}%)")
+```
+
+## Prometheus Metrics
+
+For Prometheus integration, use the `/metrics` endpoint:
+
+```bash
+GET /metrics
+```
+
+Returns metrics in Prometheus text format:
+
+```
+# TYPE inference_requests_total counter
+inference_requests_total{provider="openai",model="gpt-4",status="success"} 1520
+
+# TYPE inference_latency_seconds histogram
+inference_latency_seconds_bucket{provider="openai",model="gpt-4",le="0.1"} 423
+inference_latency_seconds_bucket{provider="openai",model="gpt-4",le="0.5"} 1456
+
+# TYPE cost_usd_total counter
+cost_usd_total{provider="openai",model="gpt-4"} 0.9136
+```

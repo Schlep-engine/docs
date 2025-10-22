@@ -1,0 +1,273 @@
+---
+title: "List Vault Keys"
+description: "List all stored API keys for a tenant (masked)"
+api: "GET /v1/vault/keys"
+---
+
+# List Vault Keys
+
+Retrieve a list of all API keys stored in the encrypted vault for the authenticated tenant.
+
+## Endpoint
+
+```
+GET /v1/vault/keys
+```
+
+<Note>
+  Requires tenant authentication via JWT token. All keys are returned masked for security.
+</Note>
+
+## Query Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `provider` | string | - | Filter by provider name (optional) |
+
+## Request Headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `Authorization` | Yes | Bearer JWT token |
+
+## Response
+
+```json
+{
+  "keys": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "provider": "openai",
+      "key_name": "production",
+      "masked_key": "sk-proj-****abcd",
+      "is_active": true,
+      "is_valid": true,
+      "last_validated": "2025-10-21T10:30:00Z",
+      "last_used": "2025-10-21T20:15:00Z",
+      "usage_count": 1523,
+      "created_at": "2025-10-01T12:00:00Z"
+    },
+    {
+      "id": "660e8400-e29b-41d4-a716-446655440001",
+      "provider": "anthropic",
+      "key_name": "production",
+      "masked_key": "sk-ant-****xyz9",
+      "is_active": true,
+      "is_valid": true,
+      "last_validated": "2025-10-21T10:30:00Z",
+      "last_used": "2025-10-21T19:45:00Z",
+      "usage_count": 503,
+      "created_at": "2025-10-01T12:05:00Z"
+    },
+    {
+      "id": "770e8400-e29b-41d4-a716-446655440002",
+      "provider": "openai",
+      "key_name": "staging",
+      "masked_key": "sk-proj-****efgh",
+      "is_active": false,
+      "is_valid": null,
+      "last_validated": null,
+      "last_used": null,
+      "usage_count": 0,
+      "created_at": "2025-10-15T14:22:00Z"
+    }
+  ],
+  "count": 3
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `keys` | array | Array of key objects |
+| `keys[].id` | string | Unique key identifier (UUID) |
+| `keys[].provider` | string | Provider name (openai, anthropic, etc.) |
+| `keys[].key_name` | string | User-defined key name |
+| `keys[].masked_key` | string | Masked API key (first 7 + last 4 chars) |
+| `keys[].is_active` | boolean | Whether this is the active key for the provider |
+| `keys[].is_valid` | boolean | Validation status (null if not yet validated) |
+| `keys[].last_validated` | string | Last validation timestamp (null if never) |
+| `keys[].last_used` | string | Last usage timestamp (null if never used) |
+| `keys[].usage_count` | integer | Number of times this key has been used |
+| `keys[].created_at` | string | When the key was stored |
+| `count` | integer | Total number of keys |
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| `200` | Success |
+| `401` | Unauthorized (invalid or expired token) |
+| `500` | Internal server error |
+
+## Example Requests
+
+<CodeGroup>
+
+```bash cURL - All Keys
+curl http://localhost:8080/v1/vault/keys \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```bash cURL - Filter by Provider
+curl "http://localhost:8080/v1/vault/keys?provider=openai" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```python Python
+import requests
+
+# Get all keys
+response = requests.get(
+    "http://localhost:8080/v1/vault/keys",
+    headers={"Authorization": "Bearer YOUR_JWT_TOKEN"}
+)
+
+keys = response.json()["keys"]
+print(f"Total keys: {len(keys)}")
+
+for key in keys:
+    status = "✓ Active" if key["is_active"] else "  Inactive"
+    valid = "✓ Valid" if key["is_valid"] else "? Unknown" if key["is_valid"] is None else "✗ Invalid"
+    print(f"{status} | {valid} | {key['provider']:12s} | {key['key_name']:15s} | {key['masked_key']}")
+```
+
+```javascript JavaScript
+// Get all keys and display active ones
+const response = await fetch('http://localhost:8080/v1/vault/keys', {
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+});
+
+const data = await response.json();
+const activeKeys = data.keys.filter(k => k.is_active);
+
+console.log(`Total keys: ${data.count}`);
+console.log(`Active keys: ${activeKeys.length}`);
+
+activeKeys.forEach(key => {
+  console.log(`${key.provider}: ${key.masked_key} (used ${key.usage_count} times)`);
+});
+```
+
+</CodeGroup>
+
+## Filtering Examples
+
+### Get All OpenAI Keys
+```bash
+GET /v1/vault/keys?provider=openai
+```
+
+### Get All Anthropic Keys
+```bash
+GET /v1/vault/keys?provider=anthropic
+```
+
+## Key Status Indicators
+
+### Active & Valid
+```json
+{
+  "is_active": true,
+  "is_valid": true,
+  "last_validated": "2025-10-21T10:30:00Z"
+}
+```
+✅ This key is currently used for inference and has been validated.
+
+### Active but Not Validated
+```json
+{
+  "is_active": true,
+  "is_valid": null,
+  "last_validated": null
+}
+```
+⚠️ This key is used but hasn't been validated yet. Run validation:
+```bash
+POST /v1/vault/keys/:provider/validate
+```
+
+### Inactive (Rotated)
+```json
+{
+  "is_active": false,
+  "is_valid": true,
+  "last_validated": "2025-10-15T10:00:00Z"
+}
+```
+ℹ️ This key was rotated and is no longer used, but remains valid.
+
+### Invalid
+```json
+{
+  "is_active": true,
+  "is_valid": false,
+  "last_validated": "2025-10-21T08:00:00Z"
+}
+```
+❌ This key failed validation. Update or rotate:
+```bash
+POST /v1/vault/keys/:provider/rotate
+```
+
+## Usage Monitoring
+
+### Find Most Used Key
+```python
+most_used = max(keys, key=lambda k: k['usage_count'])
+print(f"Most used: {most_used['provider']} - {most_used['usage_count']} requests")
+```
+
+### Find Unused Keys
+```python
+unused = [k for k in keys if k['usage_count'] == 0]
+print(f"Unused keys: {len(unused)}")
+for key in unused:
+    print(f"  - {key['provider']}/{key['key_name']}: created {key['created_at']}")
+```
+
+### Check Last Usage
+```python
+import datetime
+
+for key in keys:
+    if key['last_used']:
+        last_used = datetime.datetime.fromisoformat(key['last_used'].replace('Z', '+00:00'))
+        days_ago = (datetime.datetime.now(datetime.timezone.utc) - last_used).days
+        print(f"{key['provider']}: last used {days_ago} days ago")
+```
+
+## Security Notes
+
+<Warning>
+  Plaintext keys are NEVER returned by this endpoint. Keys are always masked for security.
+</Warning>
+
+### Key Masking Format
+```
+Original:  sk-proj-abc123def456ghi789jkl012mno345pqr678stu901vwx234yz
+Masked:    sk-proj-****234yz
+```
+
+- Shows first 7 characters (prefix)
+- Shows last 4 characters
+- Masks everything in between
+
+### To Get Plaintext Key
+Plaintext keys are only available:
+1. During initial storage (POST /v1/vault/keys response)
+2. Never returned afterwards
+3. Decrypted only when needed for provider API calls
+4. Never logged or exposed
+
+## Related Endpoints
+
+- [Store Key](/api/vault/store) - Add new API key
+- [Get Key](/api/vault/get) - Get specific key details
+- [Rotate Key](/api/vault/rotate) - Rotate to new key
+- [Delete Key](/api/vault/delete) - Remove key from vault
+- [Validate Key](/api/vault/validate) - Test key with provider

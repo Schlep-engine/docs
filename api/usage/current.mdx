@@ -1,0 +1,277 @@
+---
+title: "Current Usage"
+description: "Get current month usage statistics and metrics"
+api: "GET /v1/usage"
+---
+
+# Get Current Usage
+
+Retrieve usage statistics and metrics for the current billing month.
+
+## Endpoint
+
+```
+GET /v1/usage
+```
+
+<Note>
+  Requires tenant authentication via JWT token.
+</Note>
+
+## Request Headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `Authorization` | Yes | Bearer JWT token |
+
+## Response
+
+```json
+{
+  "tenant_id": "acme-corp",
+  "current_month": "2025-10",
+  "total_spend_usd": 45.67,
+  "budget_limit_usd": 100.0,
+  "remaining_usd": 54.33,
+  "percentage_used": 45.67,
+  "breached": false,
+  "request_count": 1523,
+  "provider_count": 2,
+  "model_count": 3,
+  "by_provider": [
+    {
+      "provider": "openai",
+      "total_cost_usd": 30.45,
+      "request_count": 1020,
+      "avg_cost_usd": 0.0299,
+      "input_tokens": 125000,
+      "output_tokens": 45000
+    },
+    {
+      "provider": "anthropic",
+      "total_cost_usd": 15.22,
+      "request_count": 503,
+      "avg_cost_usd": 0.0302,
+      "input_tokens": 62000,
+      "output_tokens": 23000
+    }
+  ],
+  "by_model": [
+    {
+      "model": "gpt-4",
+      "provider": "openai",
+      "total_cost_usd": 28.50,
+      "request_count": 450,
+      "avg_cost_usd": 0.0633,
+      "input_tokens": 85000,
+      "output_tokens": 32000
+    },
+    {
+      "model": "gpt-3.5-turbo",
+      "provider": "openai",
+      "total_cost_usd": 1.95,
+      "request_count": 570,
+      "avg_cost_usd": 0.0034,
+      "input_tokens": 40000,
+      "output_tokens": 13000
+    },
+    {
+      "model": "claude-3-5-sonnet",
+      "provider": "anthropic",
+      "total_cost_usd": 15.22,
+      "request_count": 503,
+      "avg_cost_usd": 0.0302,
+      "input_tokens": 62000,
+      "output_tokens": 23000
+    }
+  ]
+}
+```
+
+## Response Fields
+
+### Summary
+| Field | Type | Description |
+|-------|------|-------------|
+| `tenant_id` | string | Tenant identifier |
+| `current_month` | string | Current billing month (YYYY-MM) |
+| `total_spend_usd` | float | Total spending this month in USD |
+| `budget_limit_usd` | float | Monthly budget limit from policy |
+| `remaining_usd` | float | Remaining budget (can be negative if breached) |
+| `percentage_used` | float | Percentage of budget used (0-100+) |
+| `breached` | boolean | Whether budget has been exceeded |
+| `request_count` | integer | Total number of requests |
+| `provider_count` | integer | Number of unique providers used |
+| `model_count` | integer | Number of unique models used |
+
+### Provider Breakdown
+| Field | Type | Description |
+|-------|------|-------------|
+| `by_provider[].provider` | string | Provider name |
+| `by_provider[].total_cost_usd` | float | Total cost for this provider |
+| `by_provider[].request_count` | integer | Number of requests to this provider |
+| `by_provider[].avg_cost_usd` | float | Average cost per request |
+| `by_provider[].input_tokens` | integer | Total input tokens |
+| `by_provider[].output_tokens` | integer | Total output tokens |
+
+### Model Breakdown
+| Field | Type | Description |
+|-------|------|-------------|
+| `by_model[].model` | string | Model name |
+| `by_model[].provider` | string | Provider for this model |
+| `by_model[].total_cost_usd` | float | Total cost for this model |
+| `by_model[].request_count` | integer | Number of requests |
+| `by_model[].avg_cost_usd` | float | Average cost per request |
+| `by_model[].input_tokens` | integer | Total input tokens |
+| `by_model[].output_tokens` | integer | Total output tokens |
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| `200` | Success |
+| `401` | Unauthorized (invalid or expired token) |
+| `404` | No usage data for current month |
+| `500` | Internal server error |
+
+## Example Requests
+
+<CodeGroup>
+
+```bash cURL
+curl http://localhost:8080/v1/usage \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "http://localhost:8080/v1/usage",
+    headers={"Authorization": "Bearer YOUR_JWT_TOKEN"}
+)
+
+usage = response.json()
+print(f"Month: {usage['current_month']}")
+print(f"Spend: ${usage['total_spend_usd']:.2f} / ${usage['budget_limit_usd']:.2f}")
+print(f"Budget used: {usage['percentage_used']:.1f}%")
+print(f"Requests: {usage['request_count']}")
+
+print("\nBy Provider:")
+for provider in usage['by_provider']:
+    print(f"  {provider['provider']}: ${provider['total_cost_usd']:.2f} ({provider['request_count']} reqs)")
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:8080/v1/usage', {
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+});
+
+const usage = await response.json();
+console.log(`Month: ${usage.current_month}`);
+console.log(`Spend: $${usage.total_spend_usd} / $${usage.budget_limit_usd}`);
+console.log(`Budget used: ${usage.percentage_used.toFixed(1)}%`);
+console.log(`Requests: ${usage.request_count}`);
+```
+
+</CodeGroup>
+
+## Budget Status Indicators
+
+### Under Budget
+```json
+{
+  "total_spend_usd": 45.67,
+  "budget_limit_usd": 100.0,
+  "percentage_used": 45.67,
+  "breached": false
+}
+```
+
+### Approaching Limit (80%)
+```json
+{
+  "total_spend_usd": 82.50,
+  "budget_limit_usd": 100.0,
+  "percentage_used": 82.5,
+  "breached": false
+}
+```
+<Warning>
+  Alert webhook will be triggered if `alert_on_budget_80_percent` is enabled in policy.
+</Warning>
+
+### Budget Exceeded
+```json
+{
+  "total_spend_usd": 105.30,
+  "budget_limit_usd": 100.0,
+  "remaining_usd": -5.30,
+  "percentage_used": 105.3,
+  "breached": true
+}
+```
+<Warning>
+  If `fallback_on_budget_breach` is enabled, subsequent requests will use free benchmark providers.
+</Warning>
+
+## Usage Analytics
+
+### Cost per Request
+```python
+avg_cost = usage['total_spend_usd'] / usage['request_count']
+print(f"Average cost per request: ${avg_cost:.4f}")
+```
+
+### Most Expensive Model
+```python
+most_expensive = max(usage['by_model'], key=lambda x: x['avg_cost_usd'])
+print(f"Most expensive: {most_expensive['model']} at ${most_expensive['avg_cost_usd']:.4f}/req")
+```
+
+### Provider Distribution
+```python
+for provider in usage['by_provider']:
+    percentage = (provider['total_cost_usd'] / usage['total_spend_usd']) * 100
+    print(f"{provider['provider']}: {percentage:.1f}% of spend")
+```
+
+## Monitoring Dashboard Example
+
+```javascript
+// Simple usage dashboard
+async function displayUsageDashboard() {
+  const usage = await getCurrentUsage();
+
+  // Budget gauge
+  const budgetPercentage = usage.percentage_used;
+  const budgetColor = budgetPercentage > 90 ? 'red' :
+                      budgetPercentage > 80 ? 'orange' : 'green';
+
+  console.log(`Budget: ${budgetPercentage}% [${budgetColor}]`);
+
+  // Cost breakdown
+  console.log('\nTop Models by Cost:');
+  usage.by_model
+    .sort((a, b) => b.total_cost_usd - a.total_cost_usd)
+    .slice(0, 5)
+    .forEach((model, i) => {
+      console.log(`${i+1}. ${model.model}: $${model.total_cost_usd.toFixed(2)}`);
+    });
+
+  // Efficiency metrics
+  const avgTokensPerRequest = (usage.by_provider.reduce((sum, p) =>
+    sum + p.input_tokens + p.output_tokens, 0)) / usage.request_count;
+
+  console.log(`\nAvg tokens/request: ${Math.round(avgTokensPerRequest)}`);
+}
+```
+
+## Related Endpoints
+
+- [Usage History](/api/usage/history) - Get historical usage data
+- [Audit Logs](/api/audit/query) - Query detailed request logs
+- [Export Audit](/api/audit/export) - Export usage as CSV
+- [Get Policy](/api/policy/get) - View budget limits and policy

@@ -1,0 +1,122 @@
+---
+title: "List Models"
+description: "Get available models and their providers"
+api: "GET /v1/models"
+---
+
+# List Models
+
+Retrieve a list of all available models and their associated providers.
+
+## Endpoint
+
+```
+GET /v1/models
+```
+
+## Response
+
+```json
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "gpt-4",
+      "object": "model",
+      "provider": "openai"
+    },
+    {
+      "id": "gpt-3.5-turbo",
+      "object": "model",
+      "provider": "openai"
+    },
+    {
+      "id": "claude-3-opus",
+      "object": "model",
+      "provider": "anthropic"
+    },
+    {
+      "id": "claude-3-5-sonnet",
+      "object": "model",
+      "provider": "anthropic"
+    }
+  ]
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `object` | string | Always "list" |
+| `data` | array | Array of model objects |
+| `data[].id` | string | Model identifier |
+| `data[].object` | string | Always "model" |
+| `data[].provider` | string | Provider name (openai, anthropic) |
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| `200` | Success |
+| `500` | Internal server error |
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl http://localhost:8080/v1/models
+```
+
+```python Python
+import requests
+
+response = requests.get("http://localhost:8080/v1/models")
+models = response.json()
+
+for model in models["data"]:
+    print(f"{model['id']} ({model['provider']})")
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:8080/v1/models');
+const data = await response.json();
+
+data.data.forEach(model => {
+  console.log(`${model.id} (${model.provider})`);
+});
+```
+
+</CodeGroup>
+
+## Use Cases
+
+### Dynamic Model Selection
+
+Build a UI dropdown with available models:
+
+```python
+response = requests.get("http://localhost:8080/v1/models")
+models = response.json()
+
+# Create dropdown options
+options = [
+    {"label": f"{m['id']} ({m['provider']})", "value": m["id"]}
+    for m in models["data"]
+]
+```
+
+### Filter by Provider
+
+Get only OpenAI models:
+
+```python
+response = requests.get("http://localhost:8080/v1/models")
+models = response.json()
+
+openai_models = [
+    m for m in models["data"]
+    if m["provider"] == "openai"
+]
+```

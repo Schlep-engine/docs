@@ -1,0 +1,104 @@
+---
+title: "Provider Stats"
+description: "Get real-time provider performance statistics"
+api: "GET /v1/providers/stats"
+---
+
+# Provider Statistics
+
+Retrieve real-time performance statistics for all configured providers.
+
+## Endpoint
+
+```
+GET /v1/providers/stats
+```
+
+## Response
+
+```json
+{
+  "providers": [
+    {
+      "name": "openai/gpt-4",
+      "requests": 5234,
+      "avg_latency_ms": 287.4,
+      "error_rate": 0.012,
+      "total_cost_usd": 124.56,
+      "thompson_sampling_score": 0.87
+    },
+    {
+      "name": "anthropic/claude-3-5-sonnet",
+      "requests": 3421,
+      "avg_latency_ms": 198.3,
+      "error_rate": 0.008,
+      "total_cost_usd": 67.89,
+      "thompson_sampling_score": 0.92
+    }
+  ],
+  "timestamp": 1729347296
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Provider and model name |
+| `requests` | integer | Total requests processed |
+| `avg_latency_ms` | number | Average latency in milliseconds |
+| `error_rate` | number | Error rate (0.0-1.0) |
+| `total_cost_usd` | number | Total cost in USD |
+| `thompson_sampling_score` | number | Thompson Sampling selection probability |
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl http://localhost:8080/v1/providers/stats
+```
+
+```python Python
+import requests
+
+response = requests.get("http://localhost:8080/v1/providers/stats")
+stats = response.json()
+
+for provider in stats["providers"]:
+    print(f"{provider['name']}: {provider['avg_latency_ms']}ms")
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:8080/v1/providers/stats');
+const stats = await response.json();
+
+stats.providers.forEach(p => {
+  console.log(`${p.name}: ${p.avg_latency_ms}ms`);
+});
+```
+
+</CodeGroup>
+
+## Use Cases
+
+### Monitor Provider Performance
+
+Track which providers are performing best:
+
+```python
+stats = requests.get("http://localhost:8080/v1/providers/stats").json()
+
+best = min(stats["providers"], key=lambda x: x["avg_latency_ms"])
+print(f"Fastest provider: {best['name']} ({best['avg_latency_ms']}ms)")
+```
+
+### Cost Analysis
+
+Calculate total spending across providers:
+
+```python
+stats = requests.get("http://localhost:8080/v1/providers/stats").json()
+total = sum(p["total_cost_usd"] for p in stats["providers"])
+print(f"Total spend: ${total:.2f}")
+```

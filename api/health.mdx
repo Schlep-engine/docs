@@ -1,0 +1,97 @@
+---
+title: "Health Check"
+description: "Check API server and provider health status"
+api: "GET /v1/health"
+---
+
+# Health Check
+
+Get the current health status of the Schlep-engine API server and connected providers.
+
+## Endpoint
+
+```
+GET /v1/health
+```
+
+## Response
+
+```json
+{
+  "status": "ok",
+  "service": "schlep-engine-api",
+  "version": "0.1.0-alpha",
+  "providers": {
+    "openai": "ok",
+    "anthropic": "ok"
+  }
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `status` | string | Overall health status (`ok`, `degraded`, `down`) |
+| `service` | string | Service name |
+| `version` | string | API version |
+| `providers` | object | Health status of each provider |
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| `200` | Service is healthy |
+| `503` | Service is unavailable |
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl http://localhost:8080/v1/health
+```
+
+```python Python
+import requests
+
+response = requests.get("http://localhost:8080/v1/health")
+print(response.json())
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:8080/v1/health');
+const data = await response.json();
+console.log(data);
+```
+
+</CodeGroup>
+
+## Use Cases
+
+### Monitor Service Availability
+
+Use this endpoint in health checks for load balancers and monitoring systems:
+
+```bash
+# Kubernetes liveness probe
+livenessProbe:
+  httpGet:
+    path: /v1/health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 30
+```
+
+### Check Provider Status
+
+Verify that all configured providers are accessible:
+
+```python
+response = requests.get("http://localhost:8080/v1/health")
+health = response.json()
+
+for provider, status in health["providers"].items():
+    if status != "ok":
+        print(f"Warning: {provider} is {status}")
+```

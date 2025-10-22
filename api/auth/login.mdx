@@ -1,0 +1,96 @@
+---
+title: "Login"
+description: "Authenticate and receive JWT token"
+api: "POST /v1/auth/login"
+---
+
+# Login
+
+Authenticate with your API key and receive a JWT token for subsequent requests.
+
+## Endpoint
+
+```
+POST /v1/auth/login
+```
+
+## Request
+
+```json
+{
+  "api_key": "schlep_1a2b3c4d5e6f..."
+}
+```
+
+## Request Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `api_key` | string | Yes | Your Schlep-engine API key |
+
+## Response
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expires_at": "2025-10-22T12:00:00Z",
+  "tenant_id": "acme-corp"
+}
+```
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| `200` | Success |
+| `401` | Unauthorized (invalid API key) |
+| `500` | Internal server error |
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST http://localhost:8080/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "api_key": "schlep_1a2b3c4d5e6f..."
+  }'
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    "http://localhost:8080/v1/auth/login",
+    json={"api_key": "schlep_1a2b3c4d5e6f..."}
+)
+
+token_data = response.json()
+token = token_data["token"]
+print(f"Token: {token}")
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:8080/v1/auth/login', {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({
+    api_key: 'schlep_1a2b3c4d5e6f...'
+  })
+});
+
+const {token} = await response.json();
+console.log(`Token: ${token}`);
+```
+
+</CodeGroup>
+
+## Using the Token
+
+Once you have the token, include it in the Authorization header for all subsequent requests:
+
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+  http://localhost:8080/v1/infer
+```

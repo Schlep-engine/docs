@@ -1,0 +1,184 @@
+---
+title: "Refresh Token"
+description: "Refresh an expired JWT token"
+api: "POST /v1/auth/refresh"
+---
+
+# Refresh JWT Token
+
+Refresh an expired or expiring JWT token to maintain authenticated sessions.
+
+## Endpoint
+
+```
+POST /v1/auth/refresh
+```
+
+<Note>
+  Requires a valid JWT token in the Authorization header. The token can be expired or near expiration.
+</Note>
+
+## Request Headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `Authorization` | Yes | Bearer token (can be expired) |
+
+## Request
+
+No request body required.
+
+## Response
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expires_at": "2025-10-22T20:30:00Z",
+  "tenant_id": "acme-corp"
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `token` | string | New JWT token |
+| `expires_at` | string | Token expiration timestamp (ISO 8601) |
+| `tenant_id` | string | Tenant identifier |
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| `200` | Token refreshed successfully |
+| `401` | Invalid or revoked token |
+| `500` | Internal server error |
+
+## Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST http://localhost:8080/v1/auth/refresh \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    "http://localhost:8080/v1/auth/refresh",
+    headers={
+        "Authorization": "Bearer YOUR_JWT_TOKEN"
+    }
+)
+
+new_token = response.json()["token"]
+print(f"New token: {new_token}")
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:8080/v1/auth/refresh', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+});
+
+const data = await response.json();
+console.log(`New token: ${data.token}`);
+```
+
+</CodeGroup>
+
+## Token Lifecycle
+
+### Automatic Refresh
+Configure your client to automatically refresh tokens before expiration:
+
+```javascript
+// Refresh 5 minutes before expiration
+const TOKEN_BUFFER_MS = 5 * 60 * 1000;
+
+function shouldRefreshToken(expiresAt) {
+  const expiresAtMs = new Date(expiresAt).getTime();
+  const now = Date.now();
+  return (expiresAtMs - now) < TOKEN_BUFFER_MS;
+}
+
+// Usage
+if (shouldRefreshToken(tokenExpiresAt)) {
+  const newToken = await refreshToken();
+  localStorage.setItem('jwt_token', newToken.token);
+  localStorage.setItem('token_expires_at', newToken.expires_at);
+}
+```
+
+### Token Expiration
+
+Default token lifetime: **24 hours** (configurable via `TOKEN_TTL_HOURS`)
+
+After expiration, tokens can still be refreshed within a grace period (typically 7 days).
+
+## Error Responses
+
+### Token Revoked
+
+```json
+{
+  "error": {
+    "message": "Token has been revoked",
+    "type": "token_revoked",
+    "code": "TOKEN_REVOKED"
+  }
+}
+```
+
+### Tenant Suspended
+
+```json
+{
+  "error": {
+    "message": "Tenant account is suspended",
+    "type": "tenant_suspended",
+    "code": "TENANT_SUSPENDED"
+  }
+}
+```
+
+## Best Practices
+
+1. **Refresh Before Expiration**
+   ```
+   Refresh tokens 5-10 minutes before they expire
+   ```
+
+2. **Handle Refresh Failures**
+   ```
+   If refresh fails, redirect user to login
+   ```
+
+3. **Secure Storage**
+   ```
+   Store tokens in HttpOnly cookies or secure storage
+   Never store in localStorage for production apps
+   ```
+
+4. **Implement Retry Logic**
+   ```javascript
+   async function refreshWithRetry(maxRetries = 3) {
+     for (let i = 0; i < maxRetries; i++) {
+       try {
+         return await refreshToken();
+       } catch (error) {
+         if (i === maxRetries - 1) throw error;
+         await sleep(1000 * (i + 1));
+       }
+     }
+   }
+   ```
+
+## Related Endpoints
+
+- [Login](/api/auth/login) - Initial authentication
+- [Logout](/api/auth/logout) - Revoke token and end session

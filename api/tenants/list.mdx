@@ -1,0 +1,188 @@
+---
+title: "List Tenants"
+description: "List all tenants (admin only)"
+api: "GET /v1/tenants"
+---
+
+# List Tenants
+
+Retrieve a list of all tenants. Admin access required.
+
+## Endpoint
+
+```
+GET /v1/tenants
+```
+
+<Warning>
+  This endpoint requires admin authentication. Regular tenant tokens cannot access this endpoint.
+</Warning>
+
+## Query Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `status` | string | `active` | Filter by status: `active`, `suspended`, `deleted`, `all` |
+| `limit` | integer | `50` | Number of results per page (max 100) |
+| `offset` | integer | `0` | Pagination offset |
+
+## Request Headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `Authorization` | Yes | Bearer token with admin privileges |
+
+## Response
+
+```json
+{
+  "tenants": [
+    {
+      "tenant_id": "acme-corp",
+      "tenant_name": "Acme Corporation",
+      "email": "admin@acme.com",
+      "company": "Acme Inc",
+      "status": "active",
+      "api_key_prefix": "schlep_abc",
+      "created_at": "2025-10-01T12:00:00Z",
+      "last_login_at": "2025-10-21T08:30:00Z"
+    },
+    {
+      "tenant_id": "globex-ltd",
+      "tenant_name": "Globex Ltd",
+      "email": "contact@globex.com",
+      "status": "active",
+      "api_key_prefix": "schlep_xyz",
+      "created_at": "2025-10-15T14:22:00Z",
+      "last_login_at": null
+    }
+  ],
+  "total": 42,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `tenants` | array | Array of tenant objects |
+| `tenants[].tenant_id` | string | Unique tenant identifier |
+| `tenants[].tenant_name` | string | Display name |
+| `tenants[].email` | string | Contact email |
+| `tenants[].company` | string | Company name (optional) |
+| `tenants[].status` | string | Tenant status |
+| `tenants[].api_key_prefix` | string | First 10 chars of API key |
+| `tenants[].created_at` | string | Creation timestamp |
+| `tenants[].last_login_at` | string | Last login timestamp (null if never) |
+| `total` | integer | Total number of tenants matching filter |
+| `limit` | integer | Results per page |
+| `offset` | integer | Current offset |
+
+## Status Codes
+
+| Code | Description |
+|------|-------------|
+| `200` | Success |
+| `401` | Unauthorized (not admin) |
+| `403` | Forbidden (insufficient permissions) |
+| `500` | Internal server error |
+
+## Example Requests
+
+<CodeGroup>
+
+```bash cURL - All Active Tenants
+curl "http://localhost:8080/v1/tenants?status=active&limit=50" \
+  -H "Authorization: Bearer ADMIN_TOKEN"
+```
+
+```bash cURL - All Statuses
+curl "http://localhost:8080/v1/tenants?status=all&limit=100" \
+  -H "Authorization: Bearer ADMIN_TOKEN"
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    "http://localhost:8080/v1/tenants",
+    headers={"Authorization": "Bearer ADMIN_TOKEN"},
+    params={"status": "active", "limit": 50, "offset": 0}
+)
+
+tenants = response.json()["tenants"]
+for tenant in tenants:
+    print(f"{tenant['tenant_id']}: {tenant['tenant_name']} ({tenant['status']})")
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'http://localhost:8080/v1/tenants?status=active&limit=50&offset=0',
+  {
+    headers: {
+      'Authorization': 'Bearer ADMIN_TOKEN'
+    }
+  }
+);
+
+const data = await response.json();
+console.log(`Total tenants: ${data.total}`);
+data.tenants.forEach(tenant => {
+  console.log(`${tenant.tenant_id}: ${tenant.tenant_name}`);
+});
+```
+
+</CodeGroup>
+
+## Pagination Example
+
+```python
+# Fetch all tenants with pagination
+def get_all_tenants(admin_token):
+    all_tenants = []
+    offset = 0
+    limit = 100
+
+    while True:
+        response = requests.get(
+            "http://localhost:8080/v1/tenants",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            params={"status": "all", "limit": limit, "offset": offset}
+        )
+
+        data = response.json()
+        all_tenants.extend(data["tenants"])
+
+        if offset + limit >= data["total"]:
+            break
+
+        offset += limit
+
+    return all_tenants
+```
+
+## Filtering Examples
+
+### Active Tenants Only
+```bash
+GET /v1/tenants?status=active
+```
+
+### Suspended Tenants
+```bash
+GET /v1/tenants?status=suspended
+```
+
+### Recently Created (with pagination)
+```bash
+GET /v1/tenants?status=all&limit=20&offset=0
+```
+
+## Related Endpoints
+
+- [Create Tenant](/api/tenants/create) - Create new tenant
+- [Get Tenant](/api/tenants/get) - Get specific tenant details
+- [Update Tenant](/api/tenants/update) - Update tenant information
+- [Suspend Tenant](/api/tenants/suspend) - Suspend tenant account

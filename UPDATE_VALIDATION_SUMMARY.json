@@ -1,0 +1,381 @@
+{
+  "timestamp": "2025-10-21T20:30:00Z",
+  "audit_summary": {
+    "total_endpoints_in_codebase": 32,
+    "total_endpoints_documented": 10,
+    "endpoints_missing_documentation": 22,
+    "documentation_accuracy": "65%",
+    "critical_errors": 0,
+    "warnings": 8
+  },
+  "verified_endpoints": {
+    "inference": {
+      "POST /v1/infer": {
+        "status": "documented",
+        "location": "api/inference.mdx",
+        "accuracy": "accurate",
+        "notes": "Well documented with examples"
+      },
+      "POST /v1/chat/completions": {
+        "status": "mentioned",
+        "location": "api/inference.mdx",
+        "accuracy": "accurate",
+        "notes": "Listed as alias"
+      },
+      "GET /v1/models": {
+        "status": "documented",
+        "location": "api/inference.mdx",
+        "accuracy": "accurate"
+      },
+      "GET /v1/health": {
+        "status": "documented",
+        "location": "api/health.mdx",
+        "accuracy": "accurate"
+      },
+      "GET /v1/metrics": {
+        "status": "documented",
+        "location": "api/metrics.mdx",
+        "accuracy": "accurate"
+      },
+      "GET /v1/providers/stats": {
+        "status": "documented",
+        "location": "api/provider-stats.mdx",
+        "accuracy": "accurate"
+      }
+    },
+    "authentication": {
+      "POST /v1/auth/login": {
+        "status": "partially_documented",
+        "location": "api/auth/login.mdx",
+        "accuracy": "needs_update",
+        "notes": "Exists but may need Phase 14 updates"
+      },
+      "POST /v1/auth/refresh": {
+        "status": "missing",
+        "severity": "medium",
+        "phase": "14"
+      },
+      "POST /v1/auth/logout": {
+        "status": "missing",
+        "severity": "medium",
+        "phase": "14"
+      }
+    },
+    "tenants": {
+      "POST /v1/tenants": {
+        "status": "partially_documented",
+        "location": "api/tenants/create.mdx",
+        "accuracy": "needs_update",
+        "notes": "Basic structure exists, needs Phase 14 details"
+      },
+      "GET /v1/tenants": {
+        "status": "missing",
+        "severity": "high",
+        "phase": "14"
+      },
+      "GET /v1/tenants/:tenant_id": {
+        "status": "missing",
+        "severity": "high",
+        "phase": "14"
+      },
+      "PUT /v1/tenants/:tenant_id": {
+        "status": "missing",
+        "severity": "medium",
+        "phase": "14"
+      },
+      "POST /v1/tenants/:tenant_id/suspend": {
+        "status": "missing",
+        "severity": "medium",
+        "phase": "14"
+      },
+      "POST /v1/tenants/:tenant_id/activate": {
+        "status": "missing",
+        "severity": "medium",
+        "phase": "14"
+      },
+      "DELETE /v1/tenants/:tenant_id": {
+        "status": "missing",
+        "severity": "medium",
+        "phase": "14"
+      }
+    },
+    "vault": {
+      "POST /v1/vault/keys": {
+        "status": "documented",
+        "location": "api/vault/store.mdx",
+        "accuracy": "accurate",
+        "notes": "Good documentation with encryption details"
+      },
+      "GET /v1/vault/keys": {
+        "status": "missing",
+        "severity": "high",
+        "phase": "14"
+      },
+      "GET /v1/vault/keys/:provider": {
+        "status": "missing",
+        "severity": "high",
+        "phase": "14"
+      },
+      "DELETE /v1/vault/keys/:provider": {
+        "status": "missing",
+        "severity": "medium",
+        "phase": "14"
+      },
+      "POST /v1/vault/keys/:provider/rotate": {
+        "status": "missing",
+        "severity": "medium",
+        "phase": "14"
+      },
+      "POST /v1/vault/keys/:provider/validate": {
+        "status": "missing",
+        "severity": "low",
+        "phase": "14"
+      }
+    },
+    "policy": {
+      "GET /v1/policy": {
+        "status": "missing",
+        "severity": "high",
+        "phase": "14"
+      },
+      "PUT /v1/policy": {
+        "status": "missing",
+        "severity": "high",
+        "phase": "14"
+      },
+      "POST /v1/policy/reset": {
+        "status": "missing",
+        "severity": "low",
+        "phase": "14"
+      },
+      "GET /v1/policy/history": {
+        "status": "missing",
+        "severity": "low",
+        "phase": "14"
+      }
+    },
+    "usage": {
+      "GET /v1/usage": {
+        "status": "missing",
+        "severity": "high",
+        "phase": "14"
+      },
+      "GET /v1/usage/history": {
+        "status": "missing",
+        "severity": "medium",
+        "phase": "14"
+      },
+      "GET /v1/audit": {
+        "status": "missing",
+        "severity": "medium",
+        "phase": "14"
+      },
+      "GET /v1/audit/export": {
+        "status": "missing",
+        "severity": "low",
+        "phase": "14"
+      }
+    }
+  },
+  "environment_variables": {
+    "documented": [
+      "PORT",
+      "HOST",
+      "ENV",
+      "DEBUG",
+      "PROVIDER_MODE",
+      "OPENAI_API_KEY",
+      "ANTHROPIC_API_KEY",
+      "OPTIMIZER_MODE",
+      "OPTIMIZER_SAMPLE_RATE",
+      "ENABLE_MULTI_TENANCY",
+      "DATABASE_URL",
+      "JWT_SECRET",
+      "VAULT_MASTER_KEY",
+      "ADMIN_TOKEN",
+      "METRICS_ENABLED",
+      "METRICS_PORT",
+      "TRACING_ENABLED",
+      "LOG_LEVEL",
+      "LOG_FORMAT",
+      "RATE_LIMIT_ENABLED"
+    ],
+    "missing": [
+      "PROVIDER_TEST_MODE",
+      "MAX_MONTHLY_COST_USD",
+      "ENABLE_BUDGET_LIMIT",
+      "FALLBACK_ON_BUDGET_BREACH",
+      "MAX_TOKENS_PER_REQUEST",
+      "ENABLE_TOKEN_LIMIT",
+      "ENABLE_BENCHMARK_FALLBACK",
+      "VALIDATE_KEYS_ON_STARTUP",
+      "FAIL_FAST_ON_INVALID_KEY",
+      "ENABLE_PERSISTENCE",
+      "ENABLE_BYOK_VAULT",
+      "TOKEN_TTL_HOURS",
+      "TRACK_JWT_SESSIONS",
+      "REQUEST_TIMEOUT",
+      "PROVIDER_TIMEOUT",
+      "MAX_RETRIES",
+      "RETRY_DELAY_MS",
+      "VERBOSE_LOGGING",
+      "SHADOW_LOG_DIR",
+      "TRACE_SAMPLING_RATE"
+    ],
+    "total_in_code": 40,
+    "total_documented": 20,
+    "coverage": "50%"
+  },
+  "provider_information": {
+    "supported_providers": {
+      "openai": {
+        "modes": ["real", "mock", "benchmark"],
+        "documented": "yes",
+        "models_documented": ["gpt-4", "gpt-3.5-turbo"]
+      },
+      "anthropic": {
+        "modes": ["real", "benchmark"],
+        "documented": "yes",
+        "models_documented": ["claude-3-opus", "claude-3-5-sonnet"]
+      }
+    },
+    "provider_modes": {
+      "mock": {
+        "documented": "yes",
+        "accuracy": "accurate"
+      },
+      "benchmark": {
+        "documented": "yes",
+        "accuracy": "accurate",
+        "notes": "Phase 11 feature well documented"
+      },
+      "real": {
+        "documented": "yes",
+        "accuracy": "accurate"
+      },
+      "hybrid": {
+        "documented": "yes",
+        "accuracy": "accurate"
+      }
+    }
+  },
+  "features": {
+    "thompson_sampling": {
+      "documented": "yes",
+      "location": "core-concepts/architecture.mdx",
+      "phase": "10",
+      "accuracy": "good"
+    },
+    "safety_controls": {
+      "documented": "partial",
+      "phase": "12",
+      "missing_details": [
+        "Budget enforcement flow",
+        "Token limit enforcement",
+        "Benchmark fallback trigger conditions",
+        "Safety check error responses"
+      ]
+    },
+    "multi_tenancy": {
+      "documented": "partial",
+      "phase": "14",
+      "missing_details": [
+        "Complete tenant lifecycle",
+        "BYOK vault operations",
+        "Policy configuration",
+        "Usage analytics",
+        "Audit logging"
+      ]
+    },
+    "developer_console": {
+      "documented": "no",
+      "phase": "15",
+      "severity": "high",
+      "notes": "Phase 15 Developer Console not yet documented"
+    }
+  },
+  "consistency_check": {
+    "terminology": {
+      "product_name": "Consistent - Schlep-engine used throughout",
+      "api_version": "Consistent - v0.1.0-alpha mentioned in Phase 14/15 reports",
+      "endpoint_prefix": "Consistent - /v1/ prefix used"
+    },
+    "phase_alignment": {
+      "phase_10": "Documented - Thompson Sampling",
+      "phase_11": "Documented - Benchmark providers",
+      "phase_12": "Partially documented - Safety controls mentioned but incomplete",
+      "phase_13": "Documented - Persistence layer",
+      "phase_14": "Partially documented - Multi-tenancy partially covered",
+      "phase_15": "Not documented - Developer Console missing"
+    }
+  },
+  "security_verification": {
+    "no_secrets_exposed": true,
+    "api_keys_masked": true,
+    "encryption_documented": true,
+    "authentication_flows_documented": "partial",
+    "notes": "No credentials or internal URLs found in documentation"
+  },
+  "recommendations": {
+    "high_priority": [
+      "Document all Phase 14 API endpoints (tenants, policy, usage, vault)",
+      "Add authentication flow documentation",
+      "Document safety controls and error responses",
+      "Add Developer Console documentation (Phase 15)"
+    ],
+    "medium_priority": [
+      "Complete environment variables documentation",
+      "Add CLI documentation (schlep-cli commands)",
+      "Update architecture diagram with Phase 14 components",
+      "Add security best practices guide"
+    ],
+    "low_priority": [
+      "Add more code examples for each endpoint",
+      "Create FAQ page",
+      "Add troubleshooting guide",
+      "Add deployment guides for different platforms"
+    ]
+  },
+  "files_to_update": [
+    "configuration/environment-variables.mdx",
+    "api/auth/login.mdx",
+    "api/tenants/create.mdx",
+    "api/vault/store.mdx",
+    "core-concepts/architecture.mdx",
+    "introduction.mdx",
+    "index.mdx"
+  ],
+  "files_to_create": [
+    "api/auth/refresh.mdx",
+    "api/auth/logout.mdx",
+    "api/tenants/list.mdx",
+    "api/tenants/get.mdx",
+    "api/tenants/update.mdx",
+    "api/tenants/suspend.mdx",
+    "api/tenants/activate.mdx",
+    "api/tenants/delete.mdx",
+    "api/vault/list.mdx",
+    "api/vault/get.mdx",
+    "api/vault/delete.mdx",
+    "api/vault/rotate.mdx",
+    "api/vault/validate.mdx",
+    "api/policy/get.mdx",
+    "api/policy/update.mdx",
+    "api/policy/reset.mdx",
+    "api/policy/history.mdx",
+    "api/usage/current.mdx",
+    "api/usage/history.mdx",
+    "api/audit/query.mdx",
+    "api/audit/export.mdx",
+    "cli.mdx",
+    "security-and-safety.mdx"
+  ],
+  "validation_status": {
+    "api_endpoints": "65% documented, 22 missing",
+    "environment_variables": "50% documented, 20 missing",
+    "features": "60% documented",
+    "examples": "Good - existing docs have examples",
+    "overall_status": "Needs significant updates for Phase 14 & 15",
+    "estimated_completion": "12-15 new/updated pages required"
+  }
+}
